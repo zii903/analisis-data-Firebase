@@ -18,6 +18,15 @@ const dayColors = {
   Minggu: '#EF4444',
 };
 
+const formatDurasi = (totalJam) => {
+  if (!totalJam || totalJam <= 0) return '0 Jam';
+  const jam = Math.floor(totalJam);
+  const menit = Math.round((totalJam - jam) * 60);
+  if (jam === 0) return `${menit} Menit`;
+  if (menit === 0) return `${jam.toLocaleString('id-ID')} Jam`;
+  return `${jam.toLocaleString('id-ID')} Jam ${menit} Menit`;
+};
+
 export default function DetailArea() {
   const [loading, setLoading] = useState(false);
   const [groupedData, setGroupedData] = useState([]);
@@ -55,6 +64,7 @@ export default function DetailArea() {
                 area: machineName,
                 target: 0,
                 procTimeTotal: 0,
+                estimasiSisaWaktuTotal: 0,
                 seenMaterials: new Set(),
                 materialsDict: {},
                 daily: {
@@ -75,7 +85,8 @@ export default function DetailArea() {
           const materialKey = `${row.customer}_${row.pro_number}_${row.description}_${row.qty_produksi}_${excelRowIdx}`;
           const statusRaw = (row.status || '').toString().trim().toLowerCase();
           const isPlanned = statusRaw === 'planning' || statusRaw === 'backlog';
-          
+          const estWaktu = Number(row.estimasi_sisa_waktu || 0);
+
           if (!g.seenMaterials.has(materialKey)) {
              g.target += Number(row.qty_produksi || 0);
              g.seenMaterials.add(materialKey);
@@ -88,10 +99,12 @@ export default function DetailArea() {
                 proNumber: row.pro_number || '',
                 description: row.description || '',
                 qtyProduksi: Number(row.qty_produksi || 0),
+                estimasiSisaWaktu: estWaktu,
                 dailyActuals: {
                    Senin: 0, Selasa: 0, Rabu: 0, Kamis: 0, Jumat: 0, Sabtu: 0, Minggu: 0
                 }
              };
+             g.estimasiSisaWaktuTotal += estWaktu;
           }
           
           const mat = g.materialsDict[materialKey];
@@ -242,6 +255,8 @@ export default function DetailArea() {
          remaining: remaining > 0 ? remaining : 0,
          unplanned: totalUnplanned,
          procTime: g.procTimeTotal > 0 ? `${g.procTimeTotal.toLocaleString('id-ID', { maximumFractionDigits: 3 })}` : '0',
+         estimasiSisaWaktu: g.estimasiSisaWaktuTotal || 0,
+         estimasiSisaWaktuFormatted: formatDurasi(g.estimasiSisaWaktuTotal || 0),
          progress,
          daily: g.daily,
          materials: Object.values(g.materialsDict)
@@ -282,21 +297,25 @@ export default function DetailArea() {
           </div>
           
           <div className="p-6 bg-gray-50 flex flex-wrap items-center gap-4 border-b border-gray-100">
-             <div className="bg-white rounded-xl p-4 border border-gray-200 flex-1 min-w-[200px] text-center shadow-sm">
+             <div className="bg-white rounded-xl p-4 border border-gray-200 flex-1 min-w-[160px] text-center shadow-sm">
                 <p className="text-xs font-bold text-gray-400 mb-2 tracking-widest uppercase">Target</p>
                 <p className="text-2xl font-bold text-gray-900">{selectedMachine.target.toLocaleString('id-ID', { maximumFractionDigits: 0 })}</p>
              </div>
-             <div className="bg-white rounded-xl p-4 border border-gray-200 flex-1 min-w-[200px] text-center shadow-sm">
+             <div className="bg-white rounded-xl p-4 border border-gray-200 flex-1 min-w-[160px] text-center shadow-sm">
                 <p className="text-xs font-bold text-gray-400 mb-2 tracking-widest uppercase">Actual Output</p>
                 <p className="text-2xl font-bold text-blue-500">{selectedMachine.actual.toLocaleString('id-ID', { maximumFractionDigits: 0 })}</p>
              </div>
-             <div className="bg-white rounded-xl p-4 border border-gray-200 flex-1 min-w-[200px] text-center shadow-sm">
+             <div className="bg-white rounded-xl p-4 border border-gray-200 flex-1 min-w-[160px] text-center shadow-sm">
                 <p className="text-xs font-bold text-gray-400 mb-2 tracking-widest uppercase">Remaining</p>
                 <p className="text-2xl font-bold text-gray-900">{selectedMachine.remaining.toLocaleString('id-ID', { maximumFractionDigits: 0 })}</p>
              </div>
-             <div className="bg-white rounded-xl p-4 border border-gray-200 flex-1 min-w-[200px] text-center shadow-sm">
+             <div className="bg-white rounded-xl p-4 border border-gray-200 flex-1 min-w-[160px] text-center shadow-sm">
                 <p className="text-xs font-bold text-gray-400 mb-2 tracking-widest uppercase">Total Processing Time</p>
                 <p className="text-2xl font-bold text-gray-900">{selectedMachine.procTime} <span className="text-sm text-gray-500 font-medium">Jam</span></p>
+             </div>
+             <div className="bg-white rounded-xl p-4 border border-gray-200 flex-1 min-w-[160px] text-center shadow-sm">
+                <p className="text-xs font-bold text-gray-400 mb-2 tracking-widest uppercase">Est. Sisa Waktu</p>
+                <p className="text-2xl font-bold text-gray-900">{selectedMachine.estimasiSisaWaktuFormatted}</p>
              </div>
           </div>
           
@@ -349,6 +368,7 @@ export default function DetailArea() {
                       <th className="px-6 py-4 text-right">Qty Prod</th>
                       <th className="px-6 py-4 text-right">Actual</th>
                       <th className="px-6 py-4 text-right">Remain</th>
+                      <th className="px-6 py-4 text-right">Est. Sisa Waktu</th>
                    </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-100">
@@ -394,11 +414,12 @@ export default function DetailArea() {
                              <td className="px-6 py-4 text-right font-bold text-gray-900">{mat.qtyProduksi.toLocaleString('id-ID', { maximumFractionDigits: 0 })}</td>
                              <td className="px-6 py-4 text-right font-bold text-blue-600">{actual.toLocaleString('id-ID', { maximumFractionDigits: 0 })}</td>
                              <td className="px-6 py-4 text-right font-bold text-gray-900">{remaining > 0 ? remaining.toLocaleString('id-ID', { maximumFractionDigits: 0 }) : '0'}</td>
+                             <td className="px-6 py-4 text-right font-bold text-gray-900">{mat.estimasiSisaWaktu > 0 ? formatDurasi(mat.estimasiSisaWaktu) : '0 Jam'}</td>
                          </tr>
                       );
                    }) : (
                       <tr>
-                         <td colSpan={6} className="px-6 py-10 text-center text-gray-400 font-medium">
+                         <td colSpan={7} className="px-6 py-10 text-center text-gray-400 font-medium">
                             Tidak ada material yang ditemukan.
                          </td>
                       </tr>
@@ -514,6 +535,10 @@ export default function DetailArea() {
                   <div className="text-center px-4 border-l border-gray-200">
                     <p className="text-[10px] font-extrabold text-gray-400 mb-1 tracking-widest uppercase">PROC. TIME</p>
                     <p className="text-base font-bold text-gray-900">{item.procTime}</p>
+                  </div>
+                  <div className="text-center px-4 border-l border-gray-200">
+                    <p className="text-[10px] font-extrabold text-gray-400 mb-1 tracking-widest uppercase">EST. SISA WAKTU</p>
+                    <p className="text-base font-bold text-gray-900">{item.estimasiSisaWaktuFormatted}</p>
                   </div>
                 </div>
 
