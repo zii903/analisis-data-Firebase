@@ -155,7 +155,7 @@ export default function DetailArea() {
   useEffect(() => {
     if (groupedData.length === 0) return;
 
-    const currentDataStr = JSON.stringify(groupedData);
+    const currentDataStr = JSON.stringify(groupedData) + '_' + selectedDay;
     if (prevDataStr.current !== currentDataStr) {
       hasDataChangedRef.current = true;
       prevDataStr.current = currentDataStr;
@@ -547,8 +547,9 @@ export default function DetailArea() {
                   {daysKeys.map(day => {
                     const isActive = selectedDay === 'Semua Hari' || selectedDay === day;
                     const dayTotal = isActive ? item.daily[day].total : 0;
-
-                    const widthPercent = animateBars ? (dayTotal / item.target) * 100 : 0;
+                    
+                    const safeTarget = item.target > 0 ? item.target : Math.max(item.actual, 1);
+                    const widthPercent = animateBars ? Math.min((dayTotal / safeTarget) * 100, 100) : 0;
 
                     return (
                       <div

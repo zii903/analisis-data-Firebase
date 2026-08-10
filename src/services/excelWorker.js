@@ -85,15 +85,16 @@ self.onmessage = (e) => {
       const knownIndices = [statusIdx, targetPlanningIdx, customerIdx, planSoIdx, designIdx, proNumberIdx, materialCodeIdx, descriptionIdx, qtyOrderIdx, stockIdx, qtyProduksiIdx, waktuProsesIdx, mesinIdx, outputPerjamIdx, cycleTimeIdx, variantIdx, estimasiSisaWaktuIdx].filter(i => i !== -1);
       
       const days = ['senin', 'selasa', 'rabu', 'kamis', 'jumat', 'sabtu', 'minggu'];
+      const jsDays = ['minggu', 'senin', 'selasa', 'rabu', 'kamis', 'jumat', 'sabtu'];
       const dailyColIndices = {};
       
       headers.forEach((originalHeaderName, c) => {
         if (!knownIndices.includes(c) && originalHeaderName && String(originalHeaderName).trim() !== '') {
-          let headerName = originalHeaderName;
-          if (headerName instanceof Date) {
-              headerName = days[headerName.getDay()] + ' ' + headerName.toLocaleDateString('id-ID');
+          let headerName = String(originalHeaderName).trim();
+          if (originalHeaderName instanceof Date) {
+              headerName = jsDays[originalHeaderName.getDay()] + ' ' + originalHeaderName.toLocaleDateString('id-ID');
           }
-          const hn = String(headerName).trim().toLowerCase();
+          const hn = headerName.toLowerCase();
           let isDayCol = false;
           for (const day of days) {
             if (hn.startsWith(day)) {
@@ -101,7 +102,7 @@ self.onmessage = (e) => {
               break;
             }
           }
-          dailyColIndices[c] = { name: String(headerName), is_day: isDayCol };
+          dailyColIndices[c] = { name: headerName, is_day: isDayCol };
         }
       });
 
