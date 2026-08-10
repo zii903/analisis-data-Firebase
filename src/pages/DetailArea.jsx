@@ -257,6 +257,7 @@ export default function DetailArea() {
       procTime: g.procTimeTotal > 0 ? `${g.procTimeTotal.toLocaleString('id-ID', { maximumFractionDigits: 3 })}` : '0',
       estimasiSisaWaktu: g.estimasiSisaWaktuTotal || 0,
       estimasiSisaWaktuFormatted: formatDurasi(g.estimasiSisaWaktuTotal || 0),
+      estimasiSisaWaktuSingkat: `${Math.floor(g.estimasiSisaWaktuTotal || 0).toLocaleString('id-ID')} Jam`,
       progress,
       daily: g.daily,
       materials: Object.values(g.materialsDict)
@@ -296,26 +297,22 @@ export default function DetailArea() {
             </button>
           </div>
 
-          <div className="p-6 bg-gray-50 flex flex-wrap items-center gap-4 border-b border-gray-100">
-            <div className="bg-white rounded-xl p-4 border border-gray-200 flex-1 min-w-[160px] text-center shadow-sm">
-              <p className="text-xs font-bold text-gray-400 mb-2 tracking-widest uppercase">Target</p>
+          <div className="p-6 bg-gray-50 flex flex-wrap items-stretch gap-4 border-b border-gray-100">
+            <div className="bg-white rounded-xl p-4 border border-gray-200 flex-1 min-w-[160px] flex flex-col items-center justify-center text-center shadow-sm">
+              <p className="text-[11px] font-bold text-gray-400 mb-2 tracking-widest uppercase">Target</p>
               <p className="text-2xl font-bold text-gray-900">{selectedMachine.target.toLocaleString('id-ID', { maximumFractionDigits: 0 })}</p>
             </div>
-            <div className="bg-white rounded-xl p-4 border border-gray-200 flex-1 min-w-[160px] text-center shadow-sm">
-              <p className="text-xs font-bold text-gray-400 mb-2 tracking-widest uppercase">Actual Output</p>
+            <div className="bg-white rounded-xl p-4 border border-gray-200 flex-1 min-w-[160px] flex flex-col items-center justify-center text-center shadow-sm">
+              <p className="text-[11px] font-bold text-gray-400 mb-2 tracking-widest uppercase">Actual Output</p>
               <p className="text-2xl font-bold text-blue-500">{selectedMachine.actual.toLocaleString('id-ID', { maximumFractionDigits: 0 })}</p>
             </div>
-            <div className="bg-white rounded-xl p-4 border border-gray-200 flex-1 min-w-[160px] text-center shadow-sm">
-              <p className="text-xs font-bold text-gray-400 mb-2 tracking-widest uppercase">Remaining</p>
+            <div className="bg-white rounded-xl p-4 border border-gray-200 flex-1 min-w-[160px] flex flex-col items-center justify-center text-center shadow-sm">
+              <p className="text-[11px] font-bold text-gray-400 mb-2 tracking-widest uppercase">Remaining</p>
               <p className="text-2xl font-bold text-gray-900">{selectedMachine.remaining.toLocaleString('id-ID', { maximumFractionDigits: 0 })}</p>
             </div>
-            <div className="bg-white rounded-xl p-4 border border-gray-200 flex-1 min-w-[160px] text-center shadow-sm">
-              <p className="text-xs font-bold text-gray-400 mb-2 tracking-widest uppercase">Total Processing Time</p>
+            <div className="bg-white rounded-xl p-4 border border-gray-200 flex-1 min-w-[160px] flex flex-col items-center justify-center text-center shadow-sm">
+              <p className="text-[11px] font-bold text-gray-400 mb-2 tracking-widest uppercase">Total Processing Time</p>
               <p className="text-2xl font-bold text-gray-900">{selectedMachine.procTime} <span className="text-sm text-gray-500 font-medium">Jam</span></p>
-            </div>
-            <div className="bg-white rounded-xl p-4 border border-gray-200 flex-1 min-w-[160px] text-center shadow-sm">
-              <p className="text-xs font-bold text-gray-400 mb-2 tracking-widest uppercase">Est. Sisa Waktu</p>
-              <p className="text-2xl font-bold text-gray-900">{selectedMachine.estimasiSisaWaktuFormatted}</p>
             </div>
           </div>
 
@@ -512,30 +509,26 @@ export default function DetailArea() {
               >
                 <h2 className="text-xl font-bold text-gray-900 mb-5">{item.area}</h2>
 
-                <div className="bg-gray-50 rounded-xl p-4 border border-gray-100 flex items-center justify-between mb-5">
-                  <div className="text-center px-4">
+                <div className="bg-gray-50 rounded-xl py-4 border border-gray-100 grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-y-4 mb-5">
+                  <div className="text-center px-2">
                     <p className="text-[10px] font-extrabold text-gray-400 mb-1 tracking-widest uppercase">TARGET</p>
                     <p className="text-base font-bold text-gray-900 odometer-value" data-id={`${item.area}_target`} data-value={item.target}>{item.target.toLocaleString('id-ID', { maximumFractionDigits: 0 })}</p>
                   </div>
-                  <div className="text-center px-4 border-l border-gray-200">
+                  <div className="text-center px-2 border-l border-gray-200">
                     <p className="text-[10px] font-extrabold text-gray-400 mb-1 tracking-widest uppercase">ACTUAL</p>
                     <p className="text-base font-bold text-blue-500 odometer-value" data-id={`${item.area}_actual`} data-value={item.actual}>{item.actual.toLocaleString('id-ID', { maximumFractionDigits: 0 })}</p>
                   </div>
-                  <div className="text-center px-4 border-l border-gray-200">
+                  <div className="text-center px-2 border-l-0 sm:border-l border-gray-200">
                     <p className="text-[10px] font-extrabold text-gray-400 mb-1 tracking-widest uppercase">REMAINING</p>
                     <p className="text-base font-bold text-gray-900 odometer-value" data-id={`${item.area}_remaining`} data-value={item.remaining}>{item.remaining.toLocaleString('id-ID', { maximumFractionDigits: 0 })}</p>
                   </div>
-                  <div className="text-center px-4 border-l border-gray-200">
+                  <div className="text-center px-2 border-l sm:border-l-0 lg:border-l border-gray-200">
                     <p className="text-[10px] font-extrabold text-gray-400 mb-1 tracking-widest uppercase">UNPLANNED</p>
                     <p className="text-base font-bold text-red-500 odometer-value" data-id={`${item.area}_unplanned`} data-value={item.unplanned}>{item.unplanned.toLocaleString('id-ID', { maximumFractionDigits: 0 })}</p>
                   </div>
-                  <div className="text-center px-4 border-l border-gray-200">
-                    <p className="text-[10px] font-extrabold text-gray-400 mb-1 tracking-widest uppercase">PROC. TIME</p>
-                    <p className="text-base font-bold text-gray-900">{item.procTime}</p>
-                  </div>
-                  <div className="text-center px-4 border-l border-gray-200">
-                    <p className="text-[10px] font-extrabold text-gray-400 mb-1 tracking-widest uppercase">EST. SISA WAKTU</p>
-                    <p className="text-base font-bold text-gray-900">{item.estimasiSisaWaktuFormatted}</p>
+                  <div className="text-center px-2 border-l-0 sm:border-l border-gray-200">
+                    <p className="text-[10px] font-extrabold text-gray-400 mb-1 tracking-widest uppercase whitespace-nowrap">PROC. TIME</p>
+                    <p className="text-base font-bold text-gray-900 flex items-baseline justify-center gap-1 whitespace-nowrap">{item.procTime} <span className="text-xs text-gray-500 font-medium">Jam</span></p>
                   </div>
                 </div>
 
