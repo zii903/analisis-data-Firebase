@@ -13,7 +13,7 @@ export default function ProcessingTime() {
   const [modalSearchTerm, setModalSearchTerm] = useState('');
   const { selectedFile } = useFilter();
   const { isSyncing } = useFolderSyncContext();
-  
+
   // Hanya trigger fetch saat isSyncing selesai (true→false), bukan setiap perubahan
   const prevIsSyncing = useRef(false);
 
@@ -27,7 +27,7 @@ export default function ProcessingTime() {
         setLoading(true);
         const safeId = selectedFile.replace(/[\/\\]/g, '_');
         const rows = await get(`file_data_${safeId}`) || [];
-        
+
         const grouped = {};
         rows.forEach((row, index) => {
           const area = row.machine_name || 'Unknown';
@@ -158,26 +158,26 @@ export default function ProcessingTime() {
 
     let filteredMaterials = selectedMachine.materials || [];
     if (modalSearchTerm) {
-       const lowerSearch = modalSearchTerm.toLowerCase();
-       filteredMaterials = filteredMaterials.filter(m => 
-          String(m.status || '').toLowerCase().includes(lowerSearch) ||
-          String(m.customer || '').toLowerCase().includes(lowerSearch) ||
-          String(m.proNumber || '').toLowerCase().includes(lowerSearch) ||
-          String(m.description || '').toLowerCase().includes(lowerSearch) ||
-          String(m.subMachine || '').toLowerCase().includes(lowerSearch)
-       );
+      const lowerSearch = modalSearchTerm.toLowerCase();
+      filteredMaterials = filteredMaterials.filter(m =>
+        String(m.status || '').toLowerCase().includes(lowerSearch) ||
+        String(m.customer || '').toLowerCase().includes(lowerSearch) ||
+        String(m.proNumber || '').toLowerCase().includes(lowerSearch) ||
+        String(m.description || '').toLowerCase().includes(lowerSearch) ||
+        String(m.subMachine || '').toLowerCase().includes(lowerSearch)
+      );
     }
 
     return (
       <div className="fixed inset-0 z-50 flex items-center justify-center p-4 md:p-6 lg:p-8">
         <div className="absolute inset-0 bg-gray-900/50 backdrop-blur-sm transition-opacity" onClick={() => { setSelectedMachine(null); setModalSearchTerm(''); }}></div>
-        
+
         <div className="relative bg-white rounded-2xl shadow-2xl w-full max-w-6xl max-h-[90vh] flex flex-col overflow-hidden animate-in fade-in zoom-in-95 duration-200">
           <div className="flex items-center justify-between p-6 md:p-8 border-b border-gray-100">
             <div>
               <h2 className="text-2xl font-black text-gray-900 uppercase tracking-tight">{selectedMachine.name}</h2>
             </div>
-            <button 
+            <button
               onClick={() => { setSelectedMachine(null); setModalSearchTerm(''); }}
               className="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-full transition-colors"
             >
@@ -315,14 +315,14 @@ export default function ProcessingTime() {
             <p className="text-[11px] text-gray-500 font-bold tracking-[0.15em] mt-1 uppercase">Processing Time Based on Machine Category</p>
           </div>
         </div>
-        
+
         {/* Centered Live / Sync Indicator */}
         <div className="absolute left-1/2 transform -translate-x-1/2 flex items-center space-x-2 px-4 py-1.5 border rounded-full text-sm font-bold shadow-sm transition-colors duration-300 bg-white"
-             style={{ borderColor: isSyncing ? '#FDBA74' : '#BBF7D0', color: isSyncing ? '#F97316' : '#22C55E' }}>
+          style={{ borderColor: isSyncing ? '#FDBA74' : '#BBF7D0', color: isSyncing ? '#F97316' : '#22C55E' }}>
           <Circle className={`w-3 h-3 ${isSyncing ? 'animate-pulse' : ''}`} style={{ fill: isSyncing ? '#F97316' : '#22C55E' }} />
           <span>{isSyncing ? 'Sinkronisasi...' : 'Live'}</span>
         </div>
-        
+
         <div className="flex items-center space-x-3">
           <Link to="/detail-area" className="flex items-center space-x-2 px-5 py-2 border border-gray-200 rounded-lg text-sm font-semibold text-gray-700 bg-white hover:bg-gray-50 shadow-sm transition-colors">
             <FileText className="w-4 h-4" />
@@ -450,7 +450,7 @@ export default function ProcessingTime() {
           </div>
         </div>
       </div>
-      
+
       {renderModal()}
     </div>
   );

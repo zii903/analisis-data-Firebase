@@ -26,7 +26,7 @@ export default function ProgressDashboard() {
 
   useEffect(() => {
     if (isSyncing) return;
-    
+
     const fetchData = async () => {
       if (!selectedFile) {
         setChartData([]);
@@ -36,7 +36,7 @@ export default function ProgressDashboard() {
         setLoading(true);
         const safeId = selectedFile.replace(/[\/\\]/g, '_');
         const rows = await get(`file_data_${safeId}`) || [];
-        
+
         const grouped = {};
         rows.forEach((row) => {
           const machineName = row.machine_name || 'Unknown';
@@ -53,7 +53,7 @@ export default function ProgressDashboard() {
           const totalOutputPerKey = {};
           const plannedOutput = {};
           const unplanOutput = {};
-          
+
           daysKeys.forEach(d => {
             totalOutputPerKey[d] = 0;
             plannedOutput[d] = 0;
@@ -94,11 +94,11 @@ export default function ProgressDashboard() {
 
           let sumOutput = 0;
           const dataItem = { name: machineName };
-          
+
           daysKeys.forEach(dk => {
             if (totalOutputPerKey[dk] > 0) daysSet.add(dk);
             sumOutput += totalOutputPerKey[dk];
-            
+
             dataItem[`${dk}_Planned`] = plannedOutput[dk] || 0;
             dataItem[`${dk}_Unplan`] = unplanOutput[dk] || 0;
           });
@@ -106,7 +106,7 @@ export default function ProgressDashboard() {
           const remaining = totalOrder - sumOutput;
           dataItem.RemainingOrder = remaining > 0 ? Math.round(remaining) : 0;
           dataItem.TargetStr = Math.round(totalOrder).toLocaleString('id-ID');
-          
+
           formattedData.push(dataItem);
         }
 
@@ -137,7 +137,7 @@ export default function ProgressDashboard() {
   // Efek memutar angka (odometer)
   useEffect(() => {
     if (!chartData || chartData.length === 0) return;
-    
+
     const currentDataStr = JSON.stringify(chartData);
     if (prevDataStr.current !== currentDataStr) {
       hasDataChangedRef.current = true;
@@ -155,7 +155,7 @@ export default function ProgressDashboard() {
         hasDataChangedRef.current = false;
       }
     }
-    
+
     let animationFrames = [];
     const animateValue = (obj, start, end, duration) => {
       let startTimestamp = null;
@@ -176,46 +176,46 @@ export default function ProgressDashboard() {
 
     const timeout = setTimeout(() => {
       const shouldAnimate = isFirstMountAnim || hasDataChangedRef.current;
-      
+
       const annotationTexts = document.querySelectorAll('.apexcharts-point-annotations text tspan:nth-child(2)');
       annotationTexts.forEach((tspan, idx) => {
-         const finalStr = tspan.textContent;
-         const finalNum = parseInt(finalStr.replace(/\./g, ''));
-         const id = `annot_${idx}`;
-         const prevNum = prevValuesRef.current[id] !== undefined ? prevValuesRef.current[id] : 0;
-         
-         if (shouldAnimate && !isNaN(finalNum) && finalNum !== prevNum) {
-           animateValue(tspan, prevNum, finalNum, 1500);
-         } else if (!isNaN(finalNum)) {
-           tspan.textContent = finalNum.toLocaleString('id-ID');
-         }
+        const finalStr = tspan.textContent;
+        const finalNum = parseInt(finalStr.replace(/\./g, ''));
+        const id = `annot_${idx}`;
+        const prevNum = prevValuesRef.current[id] !== undefined ? prevValuesRef.current[id] : 0;
 
-         if (!isNaN(finalNum)) {
-           prevValuesRef.current[id] = finalNum;
-         }
+        if (shouldAnimate && !isNaN(finalNum) && finalNum !== prevNum) {
+          animateValue(tspan, prevNum, finalNum, 1500);
+        } else if (!isNaN(finalNum)) {
+          tspan.textContent = finalNum.toLocaleString('id-ID');
+        }
+
+        if (!isNaN(finalNum)) {
+          prevValuesRef.current[id] = finalNum;
+        }
       });
 
       const dataLabels = document.querySelectorAll('.apexcharts-datalabel');
       dataLabels.forEach((text, idx) => {
-         const finalStr = text.textContent;
-         const finalNum = parseInt(finalStr.replace(/\./g, ''));
-         const id = `label_${idx}`;
-         const prevNum = prevValuesRef.current[id] !== undefined ? prevValuesRef.current[id] : 0;
-         
-         if (shouldAnimate && !isNaN(finalNum) && finalNum !== prevNum) {
-           animateValue(text, prevNum, finalNum, 1500);
-         } else if (!isNaN(finalNum)) {
-           text.textContent = finalNum.toLocaleString('id-ID');
-         }
+        const finalStr = text.textContent;
+        const finalNum = parseInt(finalStr.replace(/\./g, ''));
+        const id = `label_${idx}`;
+        const prevNum = prevValuesRef.current[id] !== undefined ? prevValuesRef.current[id] : 0;
 
-         if (!isNaN(finalNum)) {
-           prevValuesRef.current[id] = finalNum;
-         }
+        if (shouldAnimate && !isNaN(finalNum) && finalNum !== prevNum) {
+          animateValue(text, prevNum, finalNum, 1500);
+        } else if (!isNaN(finalNum)) {
+          text.textContent = finalNum.toLocaleString('id-ID');
+        }
+
+        if (!isNaN(finalNum)) {
+          prevValuesRef.current[id] = finalNum;
+        }
       });
-      
+
       hasDataChangedRef.current = false;
-    }, 850); 
-    
+    }, 850);
+
     return () => {
       clearTimeout(timeout);
       animationFrames.forEach(id => window.cancelAnimationFrame(id));
@@ -244,14 +244,14 @@ export default function ProgressDashboard() {
             <p className="text-[11px] text-gray-500 font-bold tracking-[0.15em] mt-1 uppercase">Production Progress</p>
           </div>
         </div>
-        
+
         {/* Centered Live / Sync Indicator */}
         <div className="absolute left-1/2 transform -translate-x-1/2 flex items-center space-x-2 px-4 py-1.5 border rounded-full text-sm font-bold shadow-sm transition-colors duration-300 bg-white"
-             style={{ borderColor: isSyncing ? '#FDBA74' : '#BBF7D0', color: isSyncing ? '#F97316' : '#22C55E' }}>
+          style={{ borderColor: isSyncing ? '#FDBA74' : '#BBF7D0', color: isSyncing ? '#F97316' : '#22C55E' }}>
           <Circle className={`w-3 h-3 ${isSyncing ? 'animate-pulse' : ''}`} style={{ fill: isSyncing ? '#F97316' : '#22C55E' }} />
           <span>{isSyncing ? 'Sinkronisasi...' : 'Live'}</span>
         </div>
-        
+
         <div className="flex items-center space-x-3">
           <Link to="/detail-area" className="flex items-center space-x-2 px-5 py-2 border border-gray-200 rounded-lg text-sm font-semibold text-gray-600 bg-white hover:bg-gray-50 shadow-sm transition-colors">
             <FileText className="w-4 h-4" />
@@ -271,9 +271,9 @@ export default function ProgressDashboard() {
       <div className="p-4 flex-1 flex flex-col overflow-hidden">
         <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4 h-full flex flex-col overflow-hidden">
           <div className="border-b border-gray-100 pb-2 mb-3">
-             <h2 className="text-lg font-bold text-gray-900">Production Progress By Area</h2>
+            <h2 className="text-lg font-bold text-gray-900">Production Progress By Area</h2>
           </div>
-          
+
           <div className="flex justify-center mb-4 shrink-0">
             <div className="px-5 py-1.5 bg-white border border-gray-200 rounded-full text-sm font-medium text-gray-600 shadow-sm">
               Menampilkan: <span className="text-blue-600">{displayFileName}</span>
@@ -283,21 +283,21 @@ export default function ProgressDashboard() {
           <div className="flex-1 min-h-0 relative w-full overflow-hidden">
             {!selectedFile ? (
               <div className="absolute inset-0 flex items-center justify-center">
-                 <p className="text-gray-400 font-medium">Pilih File di Pengaturan</p>
+                <p className="text-gray-400 font-medium">Pilih File di Pengaturan</p>
               </div>
             ) : loading ? (
               <div className="absolute inset-0 flex items-center justify-center">
-                 <p className="text-gray-400 font-medium animate-pulse">Memuat data...</p>
+                <p className="text-gray-400 font-medium animate-pulse">Memuat data...</p>
               </div>
             ) : chartData.length === 0 ? (
               <div className="absolute inset-0 flex items-center justify-center">
                 <p className="text-gray-400 font-medium">Tidak ada data untuk ditampilkan</p>
               </div>
             ) : (
-              <div 
-                className="w-full h-full transition-all" 
-                style={{ 
-                  transitionDuration: '1500ms', 
+              <div
+                className="w-full h-full transition-all"
+                style={{
+                  transitionDuration: '1500ms',
                   transitionTimingFunction: 'cubic-bezier(0.22, 1, 0.36, 1)',
                   clipPath: animateChart ? 'inset(0% -10% -10% -10%)' : 'inset(100% -10% -10% -10%)',
                   opacity: animateChart ? 1 : 0,
@@ -317,7 +317,7 @@ export default function ProgressDashboard() {
                   availableDays.forEach(day => {
                     const isActive = selectedDayFilter === 'Semua Hari' || selectedDayFilter === day;
                     const realData = chartData.map(d => (d[`${day}_Planned`] || 0) + (d[`${day}_Unplan`] || 0));
-                    
+
                     series.push({
                       name: day,
                       data: chartData.map((d, i) => isActive ? getManipulatedValue(realData[i]) : 0),
@@ -328,7 +328,7 @@ export default function ProgressDashboard() {
 
                   const isRemainingActive = selectedDayFilter === 'Semua Hari';
                   const remainingRealData = chartData.map(d => d.RemainingOrder || 0);
-                  
+
                   series.push({
                     name: 'Remaining Order',
                     data: chartData.map((d, i) => isRemainingActive ? getManipulatedValue(remainingRealData[i]) : 0),
@@ -412,7 +412,7 @@ export default function ProgressDashboard() {
                     },
                     tooltip: {
                       y: {
-                        formatter: function(val, opts) {
+                        formatter: function (val, opts) {
                           const realValue = opts.w.config.series[opts.seriesIndex].realData[opts.dataPointIndex];
                           return realValue.toLocaleString('id-ID');
                         }
@@ -423,7 +423,7 @@ export default function ProgressDashboard() {
                       enabledOnSeries: [series.length - 1],
                       offsetX: -32,
                       offsetY: 10,
-                      formatter: function(val, opts) {
+                      formatter: function (val, opts) {
                         if (!val) return '';
                         const realVal = opts.w.config.series[opts.seriesIndex].realData[opts.dataPointIndex];
                         return realVal ? realVal.toLocaleString('id-ID') : '';
@@ -469,7 +469,7 @@ export default function ProgressDashboard() {
               </div>
             )}
           </div>
-          
+
           {selectedFile && !loading && availableDays.length > 0 && (
             <div className="flex flex-wrap items-center justify-center gap-3 mt-3 shrink-0">
               {availableDays.map(day => {

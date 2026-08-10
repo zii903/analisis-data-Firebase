@@ -46,7 +46,7 @@ export default function DetailArea() {
 
   useEffect(() => {
     if (isSyncing) return;
-    
+
     const fetchData = async () => {
       if (!selectedFile) {
         setGroupedData([]);
@@ -60,25 +60,25 @@ export default function DetailArea() {
         rows.forEach((row) => {
           const machineName = row.machine_name || 'Unknown';
           if (!grouped[machineName]) {
-             grouped[machineName] = {
-                area: machineName,
-                target: 0,
-                procTimeTotal: 0,
-                estimasiSisaWaktuTotal: 0,
-                seenMaterials: new Set(),
-                materialsDict: {},
-                daily: {
-                   Senin: { planned: 0, unplan: 0, total: 0 },
-                   Selasa: { planned: 0, unplan: 0, total: 0 },
-                   Rabu: { planned: 0, unplan: 0, total: 0 },
-                   Kamis: { planned: 0, unplan: 0, total: 0 },
-                   Jumat: { planned: 0, unplan: 0, total: 0 },
-                   Sabtu: { planned: 0, unplan: 0, total: 0 },
-                   Minggu: { planned: 0, unplan: 0, total: 0 }
-                }
-             };
+            grouped[machineName] = {
+              area: machineName,
+              target: 0,
+              procTimeTotal: 0,
+              estimasiSisaWaktuTotal: 0,
+              seenMaterials: new Set(),
+              materialsDict: {},
+              daily: {
+                Senin: { planned: 0, unplan: 0, total: 0 },
+                Selasa: { planned: 0, unplan: 0, total: 0 },
+                Rabu: { planned: 0, unplan: 0, total: 0 },
+                Kamis: { planned: 0, unplan: 0, total: 0 },
+                Jumat: { planned: 0, unplan: 0, total: 0 },
+                Sabtu: { planned: 0, unplan: 0, total: 0 },
+                Minggu: { planned: 0, unplan: 0, total: 0 }
+              }
+            };
           }
-          
+
           const g = grouped[machineName];
           const daily = typeof row.daily_details === 'string' ? JSON.parse(row.daily_details) : row.daily_details;
           const excelRowIdx = daily?.excel_row_index || 0;
@@ -88,49 +88,49 @@ export default function DetailArea() {
           const estWaktu = Number(row.estimasi_sisa_waktu || 0);
 
           if (!g.seenMaterials.has(materialKey)) {
-             g.target += Number(row.qty_produksi || 0);
-             g.seenMaterials.add(materialKey);
-             
-             g.materialsDict[materialKey] = {
-                key: materialKey,
-                status: row.status || '',
-                isPlanned,
-                customer: row.customer || '',
-                proNumber: row.pro_number || '',
-                description: row.description || '',
-                qtyProduksi: Number(row.qty_produksi || 0),
-                estimasiSisaWaktu: estWaktu,
-                dailyActuals: {
-                   Senin: 0, Selasa: 0, Rabu: 0, Kamis: 0, Jumat: 0, Sabtu: 0, Minggu: 0
-                }
-             };
-             g.estimasiSisaWaktuTotal += estWaktu;
+            g.target += Number(row.qty_produksi || 0);
+            g.seenMaterials.add(materialKey);
+
+            g.materialsDict[materialKey] = {
+              key: materialKey,
+              status: row.status || '',
+              isPlanned,
+              customer: row.customer || '',
+              proNumber: row.pro_number || '',
+              description: row.description || '',
+              qtyProduksi: Number(row.qty_produksi || 0),
+              estimasiSisaWaktu: estWaktu,
+              dailyActuals: {
+                Senin: 0, Selasa: 0, Rabu: 0, Kamis: 0, Jumat: 0, Sabtu: 0, Minggu: 0
+              }
+            };
+            g.estimasiSisaWaktuTotal += estWaktu;
           }
-          
+
           const mat = g.materialsDict[materialKey];
           g.procTimeTotal += Number(row.waktu_proses || 0);
-          
+
           if (daily) {
-             for (const [k, v] of Object.entries(daily)) {
-                if (typeof v === 'number' || (typeof v === 'string' && !isNaN(Number(v)))) {
-                   for (const dk of daysKeys) {
-                      if (k.trim().toLowerCase().startsWith(dk.toLowerCase())) {
-                         const val = Number(v);
-                         g.daily[dk].total += val;
-                         mat.dailyActuals[dk] += val;
-                         if (isPlanned) {
-                            g.daily[dk].planned += val;
-                         } else {
-                            g.daily[dk].unplan += val;
-                         }
-                         break;
-                      }
-                   }
+            for (const [k, v] of Object.entries(daily)) {
+              if (typeof v === 'number' || (typeof v === 'string' && !isNaN(Number(v)))) {
+                for (const dk of daysKeys) {
+                  if (k.trim().toLowerCase().startsWith(dk.toLowerCase())) {
+                    const val = Number(v);
+                    g.daily[dk].total += val;
+                    mat.dailyActuals[dk] += val;
+                    if (isPlanned) {
+                      g.daily[dk].planned += val;
+                    } else {
+                      g.daily[dk].unplan += val;
+                    }
+                    break;
+                  }
                 }
-             }
+              }
+            }
           }
         });
-        
+
         setGroupedData(Object.values(grouped));
       } catch (err) {
         console.error("Error fetching data:", err);
@@ -154,7 +154,7 @@ export default function DetailArea() {
   // Efek memutar angka (odometer)
   useEffect(() => {
     if (groupedData.length === 0) return;
-    
+
     const currentDataStr = JSON.stringify(groupedData);
     if (prevDataStr.current !== currentDataStr) {
       hasDataChangedRef.current = true;
@@ -172,7 +172,7 @@ export default function DetailArea() {
         hasDataChangedRef.current = false;
       }
     }
-    
+
     let animationFrames = [];
     const animateValue = (obj, start, end, duration) => {
       let startTimestamp = null;
@@ -193,26 +193,26 @@ export default function DetailArea() {
 
     const timeout = setTimeout(() => {
       const shouldAnimate = isFirstMountAnim || hasDataChangedRef.current;
-      
+
       const odometerElements = document.querySelectorAll('.odometer-value');
       odometerElements.forEach(el => {
-         const id = el.getAttribute('data-id');
-         const valStr = el.getAttribute('data-value');
-         const finalNum = valStr ? parseFloat(valStr) : parseInt(el.textContent.replace(/\./g, ''));
-         
-         const prevNum = prevValuesRef.current[id] !== undefined ? prevValuesRef.current[id] : 0;
-         
-         if (shouldAnimate && !isNaN(finalNum) && finalNum !== prevNum) {
-           animateValue(el, prevNum, finalNum, 1500);
-         } else if (!isNaN(finalNum)) {
-           el.textContent = finalNum.toLocaleString('id-ID', { maximumFractionDigits: 0 });
-         }
-         
-         if (!isNaN(finalNum)) {
-           prevValuesRef.current[id] = finalNum;
-         }
+        const id = el.getAttribute('data-id');
+        const valStr = el.getAttribute('data-value');
+        const finalNum = valStr ? parseFloat(valStr) : parseInt(el.textContent.replace(/\./g, ''));
+
+        const prevNum = prevValuesRef.current[id] !== undefined ? prevValuesRef.current[id] : 0;
+
+        if (shouldAnimate && !isNaN(finalNum) && finalNum !== prevNum) {
+          animateValue(el, prevNum, finalNum, 1500);
+        } else if (!isNaN(finalNum)) {
+          el.textContent = finalNum.toLocaleString('id-ID', { maximumFractionDigits: 0 });
+        }
+
+        if (!isNaN(finalNum)) {
+          prevValuesRef.current[id] = finalNum;
+        }
       });
-      
+
       hasDataChangedRef.current = false;
     }, 100);
 
@@ -225,42 +225,42 @@ export default function DetailArea() {
   const displayFileName = selectedFile ? selectedFile.split(/[\\/]/).pop() : 'Belum ada file';
 
   const displayData = groupedData.map(g => {
-       let totalActual = 0;
-       let totalUnplanned = 0;
-       let cumulativeActual = 0;
-       
-       if (selectedDay === 'Semua Hari') {
-          Object.values(g.daily).forEach(d => {
-             totalActual += d.total;
-             totalUnplanned += d.unplan;
-          });
-          cumulativeActual = totalActual;
-       } else if (g.daily[selectedDay]) {
-          totalActual = g.daily[selectedDay].total;
-          totalUnplanned = g.daily[selectedDay].unplan;
-          
-          const selectedIdx = daysKeys.indexOf(selectedDay);
-          for (let i = 0; i <= selectedIdx; i++) {
-             cumulativeActual += g.daily[daysKeys[i]].total;
-          }
-       }
+    let totalActual = 0;
+    let totalUnplanned = 0;
+    let cumulativeActual = 0;
 
-       const remaining = g.target - cumulativeActual;
-       const progress = g.target > 0 ? Math.round((totalActual / g.target) * 100) : 0;
-       
-       return {
-         area: g.area,
-         target: g.target,
-         actual: totalActual,
-         remaining: remaining > 0 ? remaining : 0,
-         unplanned: totalUnplanned,
-         procTime: g.procTimeTotal > 0 ? `${g.procTimeTotal.toLocaleString('id-ID', { maximumFractionDigits: 3 })}` : '0',
-         estimasiSisaWaktu: g.estimasiSisaWaktuTotal || 0,
-         estimasiSisaWaktuFormatted: formatDurasi(g.estimasiSisaWaktuTotal || 0),
-         progress,
-         daily: g.daily,
-         materials: Object.values(g.materialsDict)
-       };
+    if (selectedDay === 'Semua Hari') {
+      Object.values(g.daily).forEach(d => {
+        totalActual += d.total;
+        totalUnplanned += d.unplan;
+      });
+      cumulativeActual = totalActual;
+    } else if (g.daily[selectedDay]) {
+      totalActual = g.daily[selectedDay].total;
+      totalUnplanned = g.daily[selectedDay].unplan;
+
+      const selectedIdx = daysKeys.indexOf(selectedDay);
+      for (let i = 0; i <= selectedIdx; i++) {
+        cumulativeActual += g.daily[daysKeys[i]].total;
+      }
+    }
+
+    const remaining = g.target - cumulativeActual;
+    const progress = g.target > 0 ? Math.round((totalActual / g.target) * 100) : 0;
+
+    return {
+      area: g.area,
+      target: g.target,
+      actual: totalActual,
+      remaining: remaining > 0 ? remaining : 0,
+      unplanned: totalUnplanned,
+      procTime: g.procTimeTotal > 0 ? `${g.procTimeTotal.toLocaleString('id-ID', { maximumFractionDigits: 3 })}` : '0',
+      estimasiSisaWaktu: g.estimasiSisaWaktuTotal || 0,
+      estimasiSisaWaktuFormatted: formatDurasi(g.estimasiSisaWaktuTotal || 0),
+      progress,
+      daily: g.daily,
+      materials: Object.values(g.materialsDict)
+    };
   });
 
   const filteredData = displayData.filter(item => item.area.toLowerCase().includes(searchTerm.toLowerCase()));
@@ -271,161 +271,158 @@ export default function DetailArea() {
     const materials = selectedMachine.materials || [];
     const countPlanned = materials.filter(m => m.isPlanned).length;
     const countUnplanned = materials.filter(m => !m.isPlanned).length;
-    
+
     const isShowingPlanned = modalTab === 'Planned';
     let filteredMaterials = materials.filter(m => m.isPlanned === isShowingPlanned);
-    
+
     if (modalSearchTerm) {
-       const lowerSearch = modalSearchTerm.toLowerCase();
-       filteredMaterials = filteredMaterials.filter(m => 
-          String(m.status || '').toLowerCase().includes(lowerSearch) ||
-          String(m.description || '').toLowerCase().includes(lowerSearch) ||
-          String(m.proNumber || '').toLowerCase().includes(lowerSearch) ||
-          String(m.customer || '').toLowerCase().includes(lowerSearch)
-       );
+      const lowerSearch = modalSearchTerm.toLowerCase();
+      filteredMaterials = filteredMaterials.filter(m =>
+        String(m.status || '').toLowerCase().includes(lowerSearch) ||
+        String(m.description || '').toLowerCase().includes(lowerSearch) ||
+        String(m.proNumber || '').toLowerCase().includes(lowerSearch) ||
+        String(m.customer || '').toLowerCase().includes(lowerSearch)
+      );
     }
 
     return (
       <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50">
         <div className="bg-white rounded-2xl shadow-xl w-full max-w-6xl max-h-[90vh] flex flex-col overflow-hidden animate-in fade-in zoom-in duration-200">
-          
+
           <div className="flex items-center justify-between p-6 border-b border-gray-100">
-             <h2 className="text-3xl font-bold text-gray-900">{selectedMachine.area}</h2>
-             <button onClick={() => setSelectedMachine(null)} className="p-2 text-gray-400 hover:text-gray-600 rounded-full hover:bg-gray-100 transition-colors">
-                <X className="w-6 h-6" />
-             </button>
+            <h2 className="text-3xl font-bold text-gray-900">{selectedMachine.area}</h2>
+            <button onClick={() => setSelectedMachine(null)} className="p-2 text-gray-400 hover:text-gray-600 rounded-full hover:bg-gray-100 transition-colors">
+              <X className="w-6 h-6" />
+            </button>
           </div>
-          
+
           <div className="p-6 bg-gray-50 flex flex-wrap items-center gap-4 border-b border-gray-100">
-             <div className="bg-white rounded-xl p-4 border border-gray-200 flex-1 min-w-[160px] text-center shadow-sm">
-                <p className="text-xs font-bold text-gray-400 mb-2 tracking-widest uppercase">Target</p>
-                <p className="text-2xl font-bold text-gray-900">{selectedMachine.target.toLocaleString('id-ID', { maximumFractionDigits: 0 })}</p>
-             </div>
-             <div className="bg-white rounded-xl p-4 border border-gray-200 flex-1 min-w-[160px] text-center shadow-sm">
-                <p className="text-xs font-bold text-gray-400 mb-2 tracking-widest uppercase">Actual Output</p>
-                <p className="text-2xl font-bold text-blue-500">{selectedMachine.actual.toLocaleString('id-ID', { maximumFractionDigits: 0 })}</p>
-             </div>
-             <div className="bg-white rounded-xl p-4 border border-gray-200 flex-1 min-w-[160px] text-center shadow-sm">
-                <p className="text-xs font-bold text-gray-400 mb-2 tracking-widest uppercase">Remaining</p>
-                <p className="text-2xl font-bold text-gray-900">{selectedMachine.remaining.toLocaleString('id-ID', { maximumFractionDigits: 0 })}</p>
-             </div>
-             <div className="bg-white rounded-xl p-4 border border-gray-200 flex-1 min-w-[160px] text-center shadow-sm">
-                <p className="text-xs font-bold text-gray-400 mb-2 tracking-widest uppercase">Total Processing Time</p>
-                <p className="text-2xl font-bold text-gray-900">{selectedMachine.procTime} <span className="text-sm text-gray-500 font-medium">Jam</span></p>
-             </div>
-             <div className="bg-white rounded-xl p-4 border border-gray-200 flex-1 min-w-[160px] text-center shadow-sm">
-                <p className="text-xs font-bold text-gray-400 mb-2 tracking-widest uppercase">Est. Sisa Waktu</p>
-                <p className="text-2xl font-bold text-gray-900">{selectedMachine.estimasiSisaWaktuFormatted}</p>
-             </div>
+            <div className="bg-white rounded-xl p-4 border border-gray-200 flex-1 min-w-[160px] text-center shadow-sm">
+              <p className="text-xs font-bold text-gray-400 mb-2 tracking-widest uppercase">Target</p>
+              <p className="text-2xl font-bold text-gray-900">{selectedMachine.target.toLocaleString('id-ID', { maximumFractionDigits: 0 })}</p>
+            </div>
+            <div className="bg-white rounded-xl p-4 border border-gray-200 flex-1 min-w-[160px] text-center shadow-sm">
+              <p className="text-xs font-bold text-gray-400 mb-2 tracking-widest uppercase">Actual Output</p>
+              <p className="text-2xl font-bold text-blue-500">{selectedMachine.actual.toLocaleString('id-ID', { maximumFractionDigits: 0 })}</p>
+            </div>
+            <div className="bg-white rounded-xl p-4 border border-gray-200 flex-1 min-w-[160px] text-center shadow-sm">
+              <p className="text-xs font-bold text-gray-400 mb-2 tracking-widest uppercase">Remaining</p>
+              <p className="text-2xl font-bold text-gray-900">{selectedMachine.remaining.toLocaleString('id-ID', { maximumFractionDigits: 0 })}</p>
+            </div>
+            <div className="bg-white rounded-xl p-4 border border-gray-200 flex-1 min-w-[160px] text-center shadow-sm">
+              <p className="text-xs font-bold text-gray-400 mb-2 tracking-widest uppercase">Total Processing Time</p>
+              <p className="text-2xl font-bold text-gray-900">{selectedMachine.procTime} <span className="text-sm text-gray-500 font-medium">Jam</span></p>
+            </div>
+            <div className="bg-white rounded-xl p-4 border border-gray-200 flex-1 min-w-[160px] text-center shadow-sm">
+              <p className="text-xs font-bold text-gray-400 mb-2 tracking-widest uppercase">Est. Sisa Waktu</p>
+              <p className="text-2xl font-bold text-gray-900">{selectedMachine.estimasiSisaWaktuFormatted}</p>
+            </div>
           </div>
-          
+
           <div className="p-6 border-b border-gray-100 space-y-4">
-             <div className="flex justify-between items-center">
-                <h3 className="font-bold text-gray-500 tracking-wider text-sm">DAFTAR MATERIAL</h3>
-                <span className="text-sm text-gray-500 bg-gray-100 px-3 py-1 rounded-full">Menampilkan: <span className="font-bold text-blue-600">{filteredMaterials.length}</span> Material</span>
-             </div>
-             
-             <div className="relative">
-                <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 w-5 h-5" />
-                <input
-                   type="text"
-                   placeholder="Cari status, material, PRO, atau customer..."
-                   className="w-full pl-12 pr-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white transition-all text-sm"
-                   value={modalSearchTerm}
-                   onChange={(e) => setModalSearchTerm(e.target.value)}
-                />
-             </div>
-             
-             <div className="flex gap-4">
-                <button
-                   onClick={() => setModalTab('Planned')}
-                   className={`flex items-center gap-2 px-6 py-2 rounded-full text-sm font-bold transition-all border ${
-                      modalTab === 'Planned' ? 'bg-blue-50 text-blue-700 border-blue-200 shadow-sm' : 'bg-transparent text-gray-500 border-transparent hover:bg-gray-100'
-                   }`}
-                >
-                   Planned
-                   <span className={`px-2 py-0.5 rounded-full text-xs ${modalTab === 'Planned' ? 'bg-blue-600 text-white' : 'bg-gray-200 text-gray-600'}`}>{countPlanned}</span>
-                </button>
-                <button
-                   onClick={() => setModalTab('Unplanned')}
-                   className={`flex items-center gap-2 px-6 py-2 rounded-full text-sm font-bold transition-all border ${
-                      modalTab === 'Unplanned' ? 'bg-red-50 text-red-700 border-red-200 shadow-sm' : 'bg-transparent text-gray-500 border-transparent hover:bg-gray-100'
-                   }`}
-                >
-                   Unplanned
-                   <span className={`px-2 py-0.5 rounded-full text-xs ${modalTab === 'Unplanned' ? 'bg-red-500 text-white' : 'bg-gray-200 text-gray-600'}`}>{countUnplanned}</span>
-                </button>
-             </div>
+            <div className="flex justify-between items-center">
+              <h3 className="font-bold text-gray-500 tracking-wider text-sm">DAFTAR MATERIAL</h3>
+              <span className="text-sm text-gray-500 bg-gray-100 px-3 py-1 rounded-full">Menampilkan: <span className="font-bold text-blue-600">{filteredMaterials.length}</span> Material</span>
+            </div>
+
+            <div className="relative">
+              <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 w-5 h-5" />
+              <input
+                type="text"
+                placeholder="Cari status, material, PRO, atau customer..."
+                className="w-full pl-12 pr-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white transition-all text-sm"
+                value={modalSearchTerm}
+                onChange={(e) => setModalSearchTerm(e.target.value)}
+              />
+            </div>
+
+            <div className="flex gap-4">
+              <button
+                onClick={() => setModalTab('Planned')}
+                className={`flex items-center gap-2 px-6 py-2 rounded-full text-sm font-bold transition-all border ${modalTab === 'Planned' ? 'bg-blue-50 text-blue-700 border-blue-200 shadow-sm' : 'bg-transparent text-gray-500 border-transparent hover:bg-gray-100'
+                  }`}
+              >
+                Planned
+                <span className={`px-2 py-0.5 rounded-full text-xs ${modalTab === 'Planned' ? 'bg-blue-600 text-white' : 'bg-gray-200 text-gray-600'}`}>{countPlanned}</span>
+              </button>
+              <button
+                onClick={() => setModalTab('Unplanned')}
+                className={`flex items-center gap-2 px-6 py-2 rounded-full text-sm font-bold transition-all border ${modalTab === 'Unplanned' ? 'bg-red-50 text-red-700 border-red-200 shadow-sm' : 'bg-transparent text-gray-500 border-transparent hover:bg-gray-100'
+                  }`}
+              >
+                Unplanned
+                <span className={`px-2 py-0.5 rounded-full text-xs ${modalTab === 'Unplanned' ? 'bg-red-500 text-white' : 'bg-gray-200 text-gray-600'}`}>{countUnplanned}</span>
+              </button>
+            </div>
           </div>
-          
+
           <div className="flex-1 overflow-auto">
-             <table className="w-full text-sm text-left">
-                <thead className="text-xs text-gray-400 font-bold uppercase tracking-wider bg-white sticky top-0 border-b border-gray-100 z-10 shadow-sm">
-                   <tr>
-                      <th className="px-6 py-4">Status</th>
-                      <th className="px-6 py-4">Customer / PRO</th>
-                      <th className="px-6 py-4">Material Description</th>
-                      <th className="px-6 py-4 text-right">Qty Prod</th>
-                      <th className="px-6 py-4 text-right">Actual</th>
-                      <th className="px-6 py-4 text-right">Remain</th>
-                      <th className="px-6 py-4 text-right">Est. Sisa Waktu</th>
-                   </tr>
-                </thead>
-                <tbody className="divide-y divide-gray-100">
-                   {filteredMaterials.length > 0 ? filteredMaterials.map((mat, i) => {
-                      let actual = 0;
-                      let cumulativeActual = 0;
-                      
-                      if (selectedDay === 'Semua Hari') {
-                         actual = Object.values(mat.dailyActuals).reduce((a, b) => a + b, 0);
-                         cumulativeActual = actual;
-                      } else {
-                         actual = mat.dailyActuals[selectedDay] || 0;
-                         const selectedIdx = daysKeys.indexOf(selectedDay);
-                         for (let i = 0; i <= selectedIdx; i++) {
-                            cumulativeActual += (mat.dailyActuals[daysKeys[i]] || 0);
-                         }
-                      }
-                      
-                      const remaining = mat.qtyProduksi - cumulativeActual;
-                      
-                      return (
-                         <tr key={i} className="hover:bg-gray-50 transition-colors">
-                            <td className="px-6 py-4">
-                               <span className={`px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider ${
-                                  isShowingPlanned ? 'bg-blue-50 text-blue-600' : 'bg-red-50 text-red-600'
-                               }`}>
-                                  {mat.status || 'UNPLANNED'}
-                               </span>
-                            </td>
-                            <td className="px-6 py-4">
-                               <div className="font-bold text-gray-900 mb-1">{mat.customer || '-'}</div>
-                               {(!mat.proNumber || String(mat.proNumber).startsWith('DRAFT-ROW')) ? (
-                                  <div className="flex items-center gap-1 text-[10px] text-gray-400 bg-gray-50 px-2 py-0.5 rounded w-fit">
-                                     <span className="font-bold">PRO</span> -
-                                  </div>
-                               ) : (
-                                  <div className="flex items-center gap-1 text-[10px] text-gray-500 bg-gray-100 px-2 py-0.5 rounded w-fit">
-                                     <span className="font-bold">PRO</span> {mat.proNumber}
-                                  </div>
-                               )}
-                             </td>
-                             <td className="px-6 py-4 font-bold text-gray-700">{mat.description || '-'}</td>
-                             <td className="px-6 py-4 text-right font-bold text-gray-900">{mat.qtyProduksi.toLocaleString('id-ID', { maximumFractionDigits: 0 })}</td>
-                             <td className="px-6 py-4 text-right font-bold text-blue-600">{actual.toLocaleString('id-ID', { maximumFractionDigits: 0 })}</td>
-                             <td className="px-6 py-4 text-right font-bold text-gray-900">{remaining > 0 ? remaining.toLocaleString('id-ID', { maximumFractionDigits: 0 }) : '0'}</td>
-                             <td className="px-6 py-4 text-right font-bold text-gray-900">{mat.estimasiSisaWaktu > 0 ? formatDurasi(mat.estimasiSisaWaktu) : '0 Jam'}</td>
-                         </tr>
-                      );
-                   }) : (
-                      <tr>
-                         <td colSpan={7} className="px-6 py-10 text-center text-gray-400 font-medium">
-                            Tidak ada material yang ditemukan.
-                         </td>
-                      </tr>
-                   )}
-                </tbody>
-             </table>
+            <table className="w-full text-sm text-left">
+              <thead className="text-xs text-gray-400 font-bold uppercase tracking-wider bg-white sticky top-0 border-b border-gray-100 z-10 shadow-sm">
+                <tr>
+                  <th className="px-6 py-4">Status</th>
+                  <th className="px-6 py-4">Customer / PRO</th>
+                  <th className="px-6 py-4">Material Description</th>
+                  <th className="px-6 py-4 text-right">Qty Prod</th>
+                  <th className="px-6 py-4 text-right">Actual</th>
+                  <th className="px-6 py-4 text-right">Remain</th>
+                  <th className="px-6 py-4 text-right">Est. Sisa Waktu</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-gray-100">
+                {filteredMaterials.length > 0 ? filteredMaterials.map((mat, i) => {
+                  let actual = 0;
+                  let cumulativeActual = 0;
+
+                  if (selectedDay === 'Semua Hari') {
+                    actual = Object.values(mat.dailyActuals).reduce((a, b) => a + b, 0);
+                    cumulativeActual = actual;
+                  } else {
+                    actual = mat.dailyActuals[selectedDay] || 0;
+                    const selectedIdx = daysKeys.indexOf(selectedDay);
+                    for (let i = 0; i <= selectedIdx; i++) {
+                      cumulativeActual += (mat.dailyActuals[daysKeys[i]] || 0);
+                    }
+                  }
+
+                  const remaining = mat.qtyProduksi - cumulativeActual;
+
+                  return (
+                    <tr key={i} className="hover:bg-gray-50 transition-colors">
+                      <td className="px-6 py-4">
+                        <span className={`px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider ${isShowingPlanned ? 'bg-blue-50 text-blue-600' : 'bg-red-50 text-red-600'
+                          }`}>
+                          {mat.status || 'UNPLANNED'}
+                        </span>
+                      </td>
+                      <td className="px-6 py-4">
+                        <div className="font-bold text-gray-900 mb-1">{mat.customer || '-'}</div>
+                        {(!mat.proNumber || String(mat.proNumber).startsWith('DRAFT-ROW')) ? (
+                          <div className="flex items-center gap-1 text-[10px] text-gray-400 bg-gray-50 px-2 py-0.5 rounded w-fit">
+                            <span className="font-bold">PRO</span> -
+                          </div>
+                        ) : (
+                          <div className="flex items-center gap-1 text-[10px] text-gray-500 bg-gray-100 px-2 py-0.5 rounded w-fit">
+                            <span className="font-bold">PRO</span> {mat.proNumber}
+                          </div>
+                        )}
+                      </td>
+                      <td className="px-6 py-4 font-bold text-gray-700">{mat.description || '-'}</td>
+                      <td className="px-6 py-4 text-right font-bold text-gray-900">{mat.qtyProduksi.toLocaleString('id-ID', { maximumFractionDigits: 0 })}</td>
+                      <td className="px-6 py-4 text-right font-bold text-blue-600">{actual.toLocaleString('id-ID', { maximumFractionDigits: 0 })}</td>
+                      <td className="px-6 py-4 text-right font-bold text-gray-900">{remaining > 0 ? remaining.toLocaleString('id-ID', { maximumFractionDigits: 0 }) : '0'}</td>
+                      <td className="px-6 py-4 text-right font-bold text-gray-900">{mat.estimasiSisaWaktu > 0 ? formatDurasi(mat.estimasiSisaWaktu) : '0 Jam'}</td>
+                    </tr>
+                  );
+                }) : (
+                  <tr>
+                    <td colSpan={7} className="px-6 py-10 text-center text-gray-400 font-medium">
+                      Tidak ada material yang ditemukan.
+                    </td>
+                  </tr>
+                )}
+              </tbody>
+            </table>
           </div>
         </div>
       </div>
@@ -442,11 +439,11 @@ export default function DetailArea() {
             <p className="text-[11px] text-gray-500 font-bold tracking-[0.15em] mt-1 uppercase">Production Progress Dashboard</p>
           </div>
         </div>
-        
+
         {/* Live indicator removed based on user request */}
-        
+
         <div className="flex items-center space-x-3">
-          <select 
+          <select
             className="px-4 py-2 border border-gray-200 rounded-lg text-sm font-semibold text-gray-700 bg-white hover:bg-gray-50 shadow-sm outline-none appearance-none pr-8 bg-[url('data:image/svg+xml;charset=US-ASCII,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%22292.4%22%20height%3D%22292.4%22%3E%3Cpath%20fill%3D%22%236B7280%22%20d%3D%22M287%2069.4a17.6%2017.6%200%200%200-13-5.4H18.4c-5%200-9.3%201.8-12.9%205.4A17.6%2017.6%200%200%200%200%2082.2c0%205%201.8%209.3%205.4%2012.9l128%20127.9c3.6%203.6%207.8%205.4%2012.8%205.4s9.2-1.8%2012.8-5.4L287%2095c3.5-3.5%205.4-7.8%205.4-12.8%200-5-1.9-9.2-5.5-12.8z%22%2F%3E%3C%2Fsvg%3E')] bg-[length:10px_10px] bg-no-repeat bg-[right_12px_center]"
             value={selectedDay}
             onChange={(e) => setSelectedDay(e.target.value)}
@@ -471,7 +468,7 @@ export default function DetailArea() {
 
       {/* Main Content */}
       <div className="p-8 flex-1 flex flex-col items-center overflow-y-auto">
-        
+
         <div className="w-full max-w-2xl">
           <div className="flex justify-center mb-6">
             <div className="px-6 py-2 bg-white border border-gray-200 rounded-full text-sm font-medium text-gray-600 shadow-sm">
@@ -504,17 +501,17 @@ export default function DetailArea() {
 
           <div className="space-y-6">
             {filteredData.map((item, idx) => (
-              <div 
-                key={idx} 
+              <div
+                key={idx}
                 className="bg-white rounded-2xl p-6 border border-gray-200 shadow-sm cursor-pointer hover:shadow-md transition-shadow"
                 onClick={() => {
-                   setSelectedMachine(item);
-                   setModalTab('Planned');
-                   setModalSearchTerm('');
+                  setSelectedMachine(item);
+                  setModalTab('Planned');
+                  setModalSearchTerm('');
                 }}
               >
                 <h2 className="text-xl font-bold text-gray-900 mb-5">{item.area}</h2>
-                
+
                 <div className="bg-gray-50 rounded-xl p-4 border border-gray-100 flex items-center justify-between mb-5">
                   <div className="text-center px-4">
                     <p className="text-[10px] font-extrabold text-gray-400 mb-1 tracking-widest uppercase">TARGET</p>
@@ -547,24 +544,24 @@ export default function DetailArea() {
                   <span>{item.progress}%</span>
                 </div>
                 <div className="w-full bg-gray-200 rounded-full h-2.5 flex overflow-hidden">
-                   {daysKeys.map(day => {
-                      const isActive = selectedDay === 'Semua Hari' || selectedDay === day;
-                      const dayTotal = isActive ? item.daily[day].total : 0;
-                      
-                      const widthPercent = animateBars ? (dayTotal / item.target) * 100 : 0;
-                      
-                      return (
-                         <div 
-                           key={day} 
-                           style={{ width: `${widthPercent}%`, backgroundColor: dayColors[day] }} 
-                           className="h-full transition-all duration-[1500ms] ease-[cubic-bezier(0.34,1.56,0.64,1)]"
-                         ></div>
-                      );
-                   })}
+                  {daysKeys.map(day => {
+                    const isActive = selectedDay === 'Semua Hari' || selectedDay === day;
+                    const dayTotal = isActive ? item.daily[day].total : 0;
+
+                    const widthPercent = animateBars ? (dayTotal / item.target) * 100 : 0;
+
+                    return (
+                      <div
+                        key={day}
+                        style={{ width: `${widthPercent}%`, backgroundColor: dayColors[day] }}
+                        className="h-full transition-all duration-[1500ms] ease-[cubic-bezier(0.34,1.56,0.64,1)]"
+                      ></div>
+                    );
+                  })}
                 </div>
               </div>
             ))}
-            
+
             {filteredData.length === 0 && (
               <div className="text-center text-gray-500 py-10 bg-white border-2 border-dashed border-gray-300 rounded-2xl">
                 {selectedFile ? 'Tidak ada data mesin yang cocok dengan pencarian.' : 'Pilih file terlebih dahulu di Pengaturan.'}
