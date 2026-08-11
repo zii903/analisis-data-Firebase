@@ -5,9 +5,8 @@ import { get } from 'idb-keyval';
 import ReactApexChart from 'react-apexcharts';
 import { useFilter } from '../contexts/FilterContext';
 import { useFolderSyncContext } from '../contexts/FolderSyncContext';
-import { FileText, Clock, Settings2, Circle } from 'lucide-react';
+import { FileText, Clock, Settings2, Circle, Factory } from 'lucide-react';
 import { Link } from 'react-router-dom';
-import logoImg from '../assets/logo.jpg';
 
 export default function ProgressDashboard() {
   const [loading, setLoading] = useState(false);
@@ -238,7 +237,9 @@ export default function ProgressDashboard() {
     <div className="flex flex-col h-full bg-[#F5F6F8]">
       <header className="bg-white h-20 px-8 flex items-center justify-between border-b border-gray-200 shadow-sm relative">
         <div className="flex items-center space-x-4">
-          <img src={logoImg} alt="Logo" className="w-12 h-12 flex-shrink-0 object-contain" />
+          <div className="w-11 h-11 rounded-xl bg-gradient-to-br from-blue-600 to-indigo-700 flex items-center justify-center text-white shadow-md shadow-blue-500/20 flex-shrink-0">
+            <Factory className="w-6 h-6" />
+          </div>
           <div className="flex flex-col justify-center">
             <h1 className="text-xl font-extrabold text-gray-900 leading-none">Dashboard</h1>
             <p className="text-[11px] text-gray-500 font-bold tracking-[0.15em] mt-1 uppercase">Production Progress</p>

@@ -2,7 +2,7 @@ import { useEffect, useState, useRef } from 'react';
 
 let isFirstAppLoad_DetailArea = true;
 import { get } from 'idb-keyval';
-import { Search, Clock, BarChart2, Settings2, Circle, X } from 'lucide-react';
+import { Search, Clock, BarChart2, Settings2, Circle, X, Factory } from 'lucide-react';
 import { useFilter } from '../contexts/FilterContext';
 import { useFolderSyncContext } from '../contexts/FolderSyncContext';
 import { Link } from 'react-router-dom';
@@ -431,6 +431,9 @@ export default function DetailArea() {
       {/* Top Navigation */}
       <header className="bg-white h-20 px-8 flex items-center justify-between border-b border-gray-200 shadow-sm relative">
         <div className="flex items-center space-x-4">
+          <div className="w-11 h-11 rounded-xl bg-gradient-to-br from-blue-600 to-indigo-700 flex items-center justify-center text-white shadow-md shadow-blue-500/20 flex-shrink-0">
+            <Factory className="w-6 h-6" />
+          </div>
           <div className="flex flex-col justify-center">
             <h1 className="text-xl font-extrabold text-gray-900 leading-none">Detail Area</h1>
             <p className="text-[11px] text-gray-500 font-bold tracking-[0.15em] mt-1 uppercase">Production Progress Dashboard</p>
