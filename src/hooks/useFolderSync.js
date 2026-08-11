@@ -7,7 +7,7 @@ export function useFolderSync() {
   // agar cache IDB lama otomatis invalid dan file di-parse ulang
   const WORKER_VERSION = 'v5';
   const [isWatching, setIsWatching] = useState(false);
-  const [isSyncing, setIsSyncing] = useState(false);
+  const [isSyncing, setIsSyncing] = useState(false);  
   const [statusText, setStatusText] = useState('Standby');
   const [folderName, setFolderName] = useState('');
   const [needsPermission, setNeedsPermission] = useState(false);
