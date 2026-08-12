@@ -88,7 +88,9 @@ export default function DetailArea() {
           const estWaktu = Number(row.estimasi_sisa_waktu || 0);
 
           if (!g.seenMaterials.has(materialKey)) {
-            g.target += Number(row.qty_produksi || 0);
+            if (isPlanned) {
+              g.target += Number(row.qty_produksi || 0);
+            }
             g.seenMaterials.add(materialKey);
 
             g.materialsDict[materialKey] = {

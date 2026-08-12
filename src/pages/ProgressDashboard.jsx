@@ -67,7 +67,10 @@ export default function ProgressDashboard() {
             const materialKey = `${row.customer}_${row.pro_number}_${row.description}_${row.qty_produksi}_${excelRowIdx}`;
 
             if (!seenMaterials[materialKey]) {
-              totalOrder += Number(row.qty_produksi || 0);
+              const statusRaw = (row.status || '').toString().trim().toLowerCase();
+              if (statusRaw === 'planning' || statusRaw === 'backlog') {
+                totalOrder += Number(row.qty_produksi || 0);
+              }
               seenMaterials[materialKey] = true;
             }
 
