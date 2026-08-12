@@ -33,7 +33,7 @@ export const parseExcelFile = (file) => {
   return new Promise((resolve, reject) => {
     let worker;
     try {
-      worker = new Worker(new URL('./excelWorker.js', import.meta.url), { type: 'module' });
+      worker = new Worker(new URL('./excelWorkerV11.js', import.meta.url), { type: 'module' });
     } catch (err) {
       return reject(err);
     }

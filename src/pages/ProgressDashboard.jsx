@@ -14,6 +14,7 @@ export default function ProgressDashboard() {
   const [availableDays, setAvailableDays] = useState([]);
   const [animateChart, setAnimateChart] = useState(false);
   const [selectedDayFilter, setSelectedDayFilter] = useState('Semua Hari');
+  const [rawRows, setRawRows] = useState([]);
   const { selectedFile } = useFilter();
 
   const isFirstComponentMount = useRef(true);
@@ -29,12 +30,15 @@ export default function ProgressDashboard() {
     const fetchData = async () => {
       if (!selectedFile) {
         setChartData([]);
+        setRawRows([]);
         return;
       }
       try {
         setLoading(true);
         const safeId = selectedFile.replace(/[\/\\]/g, '_');
         const rows = await get(`file_data_${safeId}`) || [];
+
+        setRawRows(rows);
 
         const grouped = {};
         rows.forEach((row) => {
@@ -65,10 +69,10 @@ export default function ProgressDashboard() {
             const daily = typeof row.daily_details === 'string' ? JSON.parse(row.daily_details) : row.daily_details;
             const excelRowIdx = daily?.excel_row_index || 0;
             const materialKey = `${row.customer}_${row.pro_number}_${row.description}_${row.qty_produksi}_${excelRowIdx}`;
+            const statusRaw = (row.status || '').toString().trim().toLowerCase();
 
             if (!seenMaterials[materialKey]) {
-              const statusRaw = (row.status || '').toString().trim().toLowerCase();
-              if (statusRaw === 'planning' || statusRaw === 'planing' || statusRaw === 'backlog') {
+              if ((statusRaw.includes('plan') && !statusRaw.includes('unplan')) || statusRaw.includes('backlog')) {
                 totalOrder += Number(row.qty_produksi || 0);
               }
               seenMaterials[materialKey] = true;

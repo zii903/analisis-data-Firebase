@@ -84,8 +84,19 @@ export default function DetailArea() {
           const excelRowIdx = daily?.excel_row_index || 0;
           const materialKey = `${row.customer}_${row.pro_number}_${row.description}_${row.qty_produksi}_${excelRowIdx}`;
           const statusRaw = (row.status || '').toString().trim().toLowerCase();
-          const isPlanned = statusRaw === 'planning' || statusRaw === 'planing' || statusRaw === 'backlog';
+          const isPlanned = (statusRaw.includes('plan') && !statusRaw.includes('unplan')) || statusRaw.includes('backlog');
           const estWaktu = Number(row.estimasi_sisa_waktu || 0);
+
+          if (machineName.toLowerCase().includes('hf endcap')) {
+             console.log("DEBUG HF Endcap Row:", {
+                statusRaw,
+                isPlanned,
+                qty_produksi: row.qty_produksi,
+                excelRowIdx,
+                materialKey,
+                hasSeen: g.seenMaterials.has(materialKey)
+             });
+          }
 
           if (!g.seenMaterials.has(materialKey)) {
             if (isPlanned) {

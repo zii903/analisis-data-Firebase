@@ -13,14 +13,25 @@ const cleanNum = (val) => {
 };
 
 const findIndex = (headers, searchTerms) => {
+  // Pass 1: Exact matches
   for (const term of searchTerms) {
     for (let i = 0; i < headers.length; i++) {
       const header = headers[i];
       if (header) {
         const cleanHeader = String(header).replace(/\s+/g, ' ').trim().toLowerCase();
         if (cleanHeader === term) return i;
-        
-        if (term.length > 4 && cleanHeader.includes(term)) return i;
+      }
+    }
+  }
+  // Pass 2: Partial matches
+  for (const term of searchTerms) {
+    if (term.length > 4) {
+      for (let i = 0; i < headers.length; i++) {
+        const header = headers[i];
+        if (header) {
+          const cleanHeader = String(header).replace(/\s+/g, ' ').trim().toLowerCase();
+          if (cleanHeader.includes(term)) return i;
+        }
       }
     }
   }
@@ -75,6 +86,14 @@ self.onmessage = (e) => {
       const stockIdx = findIndex(headers, ['stock', 'stok']);
       const qtyProduksiIdx = findIndex(headers, ['qty produksi', 'produksi qty', 'qty out', 'produksi']);
       
+      if (sheetName.toLowerCase().includes('hf endcap') || sheetName.toLowerCase().includes('hf-endcap')) {
+        console.log("WORKER DEBUG for", sheetName, ":");
+        console.log("Header Row Index:", headerRowIdx);
+        console.log("Headers found:", headers);
+        console.log("statusIdx:", statusIdx);
+        console.log("qtyProduksiIdx:", qtyProduksiIdx);
+      }
+
       const waktuProsesIdx = findIndex(headers, ['waktu proses', 'waktu proses(jam)', 'processing time']);
       const mesinIdx = findIndex(headers, ['mesin', 'mesini', 'mesin / area', 'mesin/area']);
       const outputPerjamIdx = findIndex(headers, ['output perjam', 'output/jam', 'output per jam']);
@@ -110,11 +129,16 @@ self.onmessage = (e) => {
         const row = rows[idx];
         if (!row || row.every(cell => cell === '')) continue;
         
-        const rawStatus = statusIdx !== -1 ? (row[statusIdx] || '') : '';
-        const cleanStatus = String(rawStatus).trim().toLowerCase();
+        const rawStatus = statusIdx !== -1 ? String(row[statusIdx] || '').trim() : '';
+        const cleanStatus = rawStatus.toLowerCase();
         let status = 'UNPLAN';
-        if (cleanStatus === 'planning') status = 'PLANNING';
-        else if (cleanStatus === 'backlog') status = 'BACKLOG';
+        if (cleanStatus.includes('plan') && !cleanStatus.includes('unplan')) {
+          status = 'PLANNING';
+        } else if (cleanStatus.includes('backlog')) {
+          status = 'BACKLOG';
+        } else if (rawStatus) {
+          status = rawStatus.toUpperCase(); // Fallback for other valid statuses if any
+        }
 
         let proNumber = proNumberIdx !== -1 ? (row[proNumberIdx] || null) : null;
         if (!proNumber || String(proNumber).trim() === '') proNumber = `DRAFT-ROW-${idx}`;
@@ -218,7 +242,9 @@ self.onmessage = (e) => {
           output_perjam: outputPerjam,
           variant,
           estimasi_sisa_waktu: estimasiSisaWaktu,
-          daily_details: dailyDetails
+          daily_details: dailyDetails,
+          debug_status_idx: statusIdx,
+          debug_header: headers ? headers[statusIdx] : 'N/A'
         });
       }
     });

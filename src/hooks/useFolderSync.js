@@ -5,7 +5,7 @@ import { parseExcelFile } from '../services/excelParser';
 export function useFolderSync() {
   // Naikkan versi ini setiap kali logika parsing/worker berubah
   // agar cache IDB lama otomatis invalid dan file di-parse ulang
-  const WORKER_VERSION = 'v5';
+  const WORKER_VERSION = 'v12';
   const [isWatching, setIsWatching] = useState(false);
   const [isSyncing, setIsSyncing] = useState(false);  
   const [statusText, setStatusText] = useState('Standby');
