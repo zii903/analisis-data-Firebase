@@ -12,7 +12,7 @@ export default function ProcessingTime() {
   const [selectedMachine, setSelectedMachine] = useState(null);
   const [modalSearchTerm, setModalSearchTerm] = useState('');
   const { selectedFile } = useFilter();
-  const { isSyncing } = useFolderSyncContext();
+  const { isSyncing, needsPermission, startWatching } = useFolderSyncContext();
 
   // Hanya trigger fetch saat isSyncing selesai (true→false), bukan setiap perubahan
   const prevIsSyncing = useRef(false);
@@ -350,6 +350,26 @@ export default function ProcessingTime() {
               Menampilkan: <span className="text-blue-600">{displayFileName}</span>
             </div>
           </div>
+
+          {needsPermission && (
+            <div className="mb-8 bg-yellow-50 border border-yellow-200 rounded-lg p-3 flex items-center justify-between shadow-sm">
+              <div className="flex items-center space-x-3">
+                <div className="w-8 h-8 bg-yellow-100 rounded-full flex items-center justify-center text-yellow-600">
+                  <span className="font-bold text-sm">!</span>
+                </div>
+                <div>
+                  <p className="text-sm font-bold text-yellow-800">Sinkronisasi Otomatis Terhenti</p>
+                  <p className="text-xs text-yellow-600">Browser direstart. Klik tombol di samping untuk melanjutkan sinkronisasi.</p>
+                </div>
+              </div>
+              <button 
+                onClick={() => startWatching(true)}
+                className="px-4 py-2 bg-yellow-500 hover:bg-yellow-600 text-white text-xs font-bold rounded shadow transition-colors"
+              >
+                Lanjutkan Sinkronisasi
+              </button>
+            </div>
+          )}
 
           <div className="relative mb-8">
             <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">

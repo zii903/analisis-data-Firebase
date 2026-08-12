@@ -37,7 +37,7 @@ export default function DetailArea() {
   const [modalTab, setModalTab] = useState('Planned');
   const [modalSearchTerm, setModalSearchTerm] = useState('');
   const { selectedFile } = useFilter();
-  const { isSyncing } = useFolderSyncContext();
+  const { isSyncing, needsPermission, startWatching } = useFolderSyncContext();
 
   const isFirstComponentMount = useRef(true);
   const prevDataStr = useRef('');
@@ -483,6 +483,26 @@ export default function DetailArea() {
       <div className="p-8 flex-1 flex flex-col items-center overflow-y-auto">
 
         <div className="w-full max-w-2xl">
+          {needsPermission && (
+            <div className="mb-4 bg-yellow-50 border border-yellow-200 rounded-lg p-3 flex items-center justify-between shadow-sm">
+              <div className="flex items-center space-x-3">
+                <div className="w-8 h-8 bg-yellow-100 rounded-full flex items-center justify-center text-yellow-600">
+                  <span className="font-bold text-sm">!</span>
+                </div>
+                <div>
+                  <p className="text-sm font-bold text-yellow-800">Sinkronisasi Otomatis Terhenti</p>
+                  <p className="text-xs text-yellow-600">Browser direstart. Klik tombol di samping untuk melanjutkan sinkronisasi.</p>
+                </div>
+              </div>
+              <button 
+                onClick={() => startWatching(true)}
+                className="px-4 py-2 bg-yellow-500 hover:bg-yellow-600 text-white text-xs font-bold rounded shadow transition-colors"
+              >
+                Lanjutkan Sinkronisasi
+              </button>
+            </div>
+          )}
+
           <div className="flex justify-center mb-6">
             <div className="px-6 py-2 bg-white border border-gray-200 rounded-full text-sm font-medium text-gray-600 shadow-sm">
               Menampilkan: <span className="text-blue-600">{displayFileName}</span>
