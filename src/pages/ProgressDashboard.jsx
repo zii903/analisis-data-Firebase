@@ -68,7 +68,7 @@ export default function ProgressDashboard() {
 
             if (!seenMaterials[materialKey]) {
               const statusRaw = (row.status || '').toString().trim().toLowerCase();
-              if (statusRaw === 'planning' || statusRaw === 'backlog') {
+              if (statusRaw === 'planning' || statusRaw === 'planing' || statusRaw === 'backlog') {
                 totalOrder += Number(row.qty_produksi || 0);
               }
               seenMaterials[materialKey] = true;

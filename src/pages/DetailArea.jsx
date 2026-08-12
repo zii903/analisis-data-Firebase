@@ -84,7 +84,7 @@ export default function DetailArea() {
           const excelRowIdx = daily?.excel_row_index || 0;
           const materialKey = `${row.customer}_${row.pro_number}_${row.description}_${row.qty_produksi}_${excelRowIdx}`;
           const statusRaw = (row.status || '').toString().trim().toLowerCase();
-          const isPlanned = statusRaw === 'planning' || statusRaw === 'backlog';
+          const isPlanned = statusRaw === 'planning' || statusRaw === 'planing' || statusRaw === 'backlog';
           const estWaktu = Number(row.estimasi_sisa_waktu || 0);
 
           if (!g.seenMaterials.has(materialKey)) {
