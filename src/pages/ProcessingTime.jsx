@@ -3,7 +3,7 @@ import { useFilter } from '../contexts/FilterContext';
 import { useFolderSyncContext } from '../contexts/FolderSyncContext';
 import { useMachineData } from '../hooks/useMachineData';
 import { formatDurasi } from '../utils/constants';
-import { Search, FileText, Settings2, BarChart2, Circle, X, Factory } from 'lucide-react';
+import { Search, FileText, Settings2, BarChart2, Circle, X, Factory, Activity } from 'lucide-react';
 import { Link } from 'react-router-dom';
 
 export default function ProcessingTime() {
@@ -213,6 +213,10 @@ export default function ProcessingTime() {
           <Link to="/" className="flex items-center space-x-2 px-5 py-2 border border-gray-200 rounded-lg text-sm font-semibold text-gray-700 bg-white hover:bg-gray-50 shadow-sm transition-colors">
             <BarChart2 className="w-4 h-4" />
             <span>Chart Dashboard</span>
+          </Link>
+          <Link to="/production-monitoring" className="flex items-center space-x-2 px-5 py-2 border border-gray-200 rounded-lg text-sm font-semibold text-gray-700 bg-white hover:bg-gray-50 shadow-sm transition-colors">
+            <Activity className="w-4 h-4" />
+            <span>Monitoring</span>
           </Link>
           <Link to="/settings" className="flex items-center space-x-2 px-5 py-2 border border-gray-200 rounded-lg text-sm font-semibold text-gray-700 bg-white hover:bg-gray-50 shadow-sm transition-colors">
             <Settings2 className="w-4 h-4" />

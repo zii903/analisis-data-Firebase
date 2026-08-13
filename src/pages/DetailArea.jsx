@@ -1,7 +1,7 @@
 import { useEffect, useState, useRef, useMemo } from 'react';
 
 let isFirstAppLoad_DetailArea = true;
-import { Search, Clock, BarChart2, Settings2, Circle, X, Factory } from 'lucide-react';
+import { Search, Clock, BarChart2, Settings2, Circle, X, Factory, Activity } from 'lucide-react';
 import { useFilter } from '../contexts/FilterContext';
 import { useFolderSyncContext } from '../contexts/FolderSyncContext';
 import { useMachineData } from '../hooks/useMachineData';
@@ -334,13 +334,17 @@ export default function DetailArea() {
             <option value="Semua Hari">Semua Hari</option>
             {daysKeys.map(d => <option key={d} value={d}>{d}</option>)}
           </select>
+          <Link to="/" className="flex items-center space-x-2 px-5 py-2 border border-gray-200 rounded-lg text-sm font-semibold text-gray-700 bg-white hover:bg-gray-50 shadow-sm transition-colors">
+            <BarChart2 className="w-4 h-4" />
+            <span>Chart Dashboard</span>
+          </Link>
           <Link to="/processing-time" className="flex items-center space-x-2 px-5 py-2 border border-gray-200 rounded-lg text-sm font-semibold text-gray-700 bg-white hover:bg-gray-50 shadow-sm transition-colors">
             <Clock className="w-4 h-4" />
             <span>Processing Time</span>
           </Link>
-          <Link to="/" className="flex items-center space-x-2 px-5 py-2 border border-gray-200 rounded-lg text-sm font-semibold text-gray-700 bg-white hover:bg-gray-50 shadow-sm transition-colors">
-            <BarChart2 className="w-4 h-4" />
-            <span>Chart Dashboard</span>
+          <Link to="/production-monitoring" className="flex items-center space-x-2 px-5 py-2 border border-gray-200 rounded-lg text-sm font-semibold text-gray-700 bg-white hover:bg-gray-50 shadow-sm transition-colors">
+            <Activity className="w-4 h-4" />
+            <span>Monitoring</span>
           </Link>
           <Link to="/settings" className="flex items-center space-x-2 px-5 py-2 border border-gray-200 rounded-lg text-sm font-semibold text-gray-700 bg-white hover:bg-gray-50 shadow-sm transition-colors">
             <Settings2 className="w-4 h-4" />

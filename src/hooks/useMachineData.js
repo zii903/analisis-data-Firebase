@@ -59,7 +59,9 @@ export function useMachineData() {
               Jumat: { planned: 0, unplan: 0, total: 0 },
               Sabtu: { planned: 0, unplan: 0, total: 0 },
               Minggu: { planned: 0, unplan: 0, total: 0 }
-            }
+            },
+            hasPlanned: false,
+            unplannedTarget: 0
           };
         }
 
@@ -81,6 +83,9 @@ export function useMachineData() {
         if (!g.seenMaterials.has(materialKey)) {
           if (isPlanned) {
             g.target += Number(row.qty_produksi || 0);
+            g.hasPlanned = true;
+          } else {
+            g.unplannedTarget += Number(row.qty_produksi || 0);
           }
           g.seenMaterials.add(materialKey);
 

@@ -6,7 +6,7 @@ import { useFilter } from '../contexts/FilterContext';
 import { useFolderSyncContext } from '../contexts/FolderSyncContext';
 import { useMachineData } from '../hooks/useMachineData';
 import { daysKeys } from '../utils/constants';
-import { FileText, Clock, Settings2, Circle, Factory } from 'lucide-react';
+import { FileText, Clock, Settings2, Circle, Factory, Activity } from 'lucide-react';
 import { Link } from 'react-router-dom';
 
 export default function ProgressDashboard() {
@@ -50,6 +50,8 @@ export default function ProgressDashboard() {
       const remaining = machine.target - sumOutput;
       dataItem.RemainingOrder = remaining > 0 ? Math.round(remaining) : 0;
       dataItem.TargetStr = Math.round(machine.target).toLocaleString('id-ID');
+      dataItem.unplannedTargetStr = Math.round(machine.unplannedTarget || 0).toLocaleString('id-ID');
+      dataItem.isFullUnplan = (!machine.hasPlanned && sumOutput > 0);
 
       formattedData.push(dataItem);
     });
@@ -115,8 +117,15 @@ export default function ProgressDashboard() {
 
       const annotationTexts = document.querySelectorAll('.apexcharts-point-annotations text tspan:nth-child(2)');
       annotationTexts.forEach((tspan, idx) => {
-        const finalStr = tspan.textContent;
-        const finalNum = parseInt(finalStr.replace(/\./g, ''));
+        const chartItem = chartData[idx];
+        if (!chartItem) return;
+        
+        if (chartItem.isFullUnplan) {
+          tspan.textContent = 'UNPLAN';
+          return;
+        }
+        
+        const finalNum = parseInt((chartItem.TargetStr || '0').replace(/\./g, ''));
         const id = `annot_${idx}`;
         const prevNum = prevValuesRef.current[id] !== undefined ? prevValuesRef.current[id] : 0;
 
@@ -133,8 +142,17 @@ export default function ProgressDashboard() {
 
       const dataLabels = document.querySelectorAll('.apexcharts-datalabel');
       dataLabels.forEach((text, idx) => {
-        const finalStr = text.textContent;
-        const finalNum = parseInt(finalStr.replace(/\./g, ''));
+        const chartItem = chartData[idx];
+        if (!chartItem) return;
+
+        const isRemainingActive = selectedDayFilter === 'Semua Hari';
+        const finalNum = isRemainingActive ? (chartItem.RemainingOrder || 0) : 0;
+        
+        if (finalNum === 0) {
+          text.textContent = '';
+          return;
+        }
+
         const id = `label_${idx}`;
         const prevNum = prevValuesRef.current[id] !== undefined ? prevValuesRef.current[id] : 0;
 
@@ -203,6 +221,10 @@ export default function ProgressDashboard() {
           <Link to="/processing-time" className="flex items-center space-x-2 px-5 py-2 border border-gray-200 rounded-lg text-sm font-semibold text-gray-600 bg-white hover:bg-gray-50 shadow-sm transition-colors">
             <Clock className="w-4 h-4" />
             <span>Processing Time</span>
+          </Link>
+          <Link to="/production-monitoring" className="flex items-center space-x-2 px-5 py-2 border border-gray-200 rounded-lg text-sm font-semibold text-gray-600 bg-white hover:bg-gray-50 shadow-sm transition-colors">
+            <Activity className="w-4 h-4" />
+            <span>Monitoring</span>
           </Link>
           <Link to="/settings" className="flex items-center space-x-2 px-5 py-2 border border-gray-200 rounded-lg text-sm font-semibold text-gray-600 bg-white hover:bg-gray-50 shadow-sm transition-colors">
             <Settings2 className="w-4 h-4" />
@@ -283,6 +305,7 @@ export default function ProgressDashboard() {
 
                     series.push({
                       name: day,
+                      dayName: day,
                       data: chartData.map((d, i) => isActive ? getManipulatedValue(realData[i]) : 0),
                       realData: realData
                     });
@@ -340,18 +363,18 @@ export default function ProgressDashboard() {
                           y: sum,
                           marker: { size: 0, strokeWidth: 0, fillOpacity: 0, strokeOpacity: 0 },
                           label: {
-                            borderColor: '#BFDBFE',
+                            borderColor: d.isFullUnplan ? '#F59E0B' : '#BFDBFE',
                             borderWidth: 2,
                             borderRadius: 20,
                             offsetY: -30,
                             style: {
-                              background: '#ffffff',
-                              color: '#0F172A',
+                              background: d.isFullUnplan ? '#FFFBEB' : '#ffffff',
+                              color: d.isFullUnplan ? '#D97706' : '#0F172A',
                               fontSize: '12px',
                               fontWeight: 900,
                               padding: { left: 8, right: 8, top: 4, bottom: 4 }
                             },
-                            text: ['TARGET', d.TargetStr || '0']
+                            text: d.isFullUnplan ? ['FULL', 'UNPLAN'] : ['TARGET', d.TargetStr || '0']
                           }
                         };
                       })
@@ -374,11 +397,51 @@ export default function ProgressDashboard() {
                       }
                     },
                     tooltip: {
-                      y: {
-                        formatter: function (val, opts) {
-                          const realValue = opts.w.config.series[opts.seriesIndex].realData[opts.dataPointIndex];
-                          return realValue.toLocaleString('id-ID');
+                      custom: function({series, seriesIndex, dataPointIndex, w}) {
+                        const s = w.config.series[seriesIndex];
+                        if (s.name === 'Remaining Order') {
+                          return `<div class="px-3 py-2 bg-white shadow rounded border font-semibold text-sm">Remaining Order: ${s.realData[dataPointIndex].toLocaleString('id-ID')}</div>`;
                         }
+                        
+                        const chartItem = chartData[dataPointIndex];
+                        const day = s.dayName;
+                        const planned = chartItem[`${day}_Planned`] || 0;
+                        const unplan = chartItem[`${day}_Unplan`] || 0;
+                        const totalActual = planned + unplan;
+                        
+                        let warningBox = '';
+                        if (unplan > 0) {
+                          if (chartItem.isFullUnplan) {
+                            warningBox = `<div class="mt-2 bg-red-100 border border-red-300 text-red-700 px-2 py-1.5 rounded text-[11px] font-bold flex items-center gap-1.5"><span>🚨</span> 100% Pekerjaan Unplanned (Target ${chartItem.unplannedTargetStr})</div>`;
+                          } else {
+                            warningBox = `<div class="mt-2 bg-yellow-100 border border-yellow-300 text-yellow-800 px-2 py-1.5 rounded text-[11px] font-bold flex items-center gap-1.5"><span>⚠️</span> Terdapat ${unplan.toLocaleString('id-ID')} output Unplanned</div>`;
+                          }
+                        }
+
+                        return `
+                          <div class="p-1 font-sans min-w-[210px]">
+                            <div class="text-sm font-bold text-gray-900 border-b border-gray-100 pb-2 mb-2 flex justify-between items-center gap-3">
+                              <span class="truncate">${chartItem.name}</span>
+                              <span class="text-[10px] bg-blue-50 text-blue-700 px-1.5 py-0.5 rounded font-bold whitespace-nowrap">TARGET: ${chartItem.TargetStr}</span>
+                            </div>
+                            <div class="text-[11px] text-gray-500 font-extrabold mb-2 uppercase tracking-wider">${day}</div>
+                            <div class="space-y-1.5">
+                              <div class="flex justify-between items-center text-xs">
+                                <span class="flex items-center gap-1.5"><span class="w-2.5 h-2.5 rounded-full" style="background: ${dayColors[day]?.planned}"></span> Planned</span>
+                                <span class="font-bold text-gray-800">${planned.toLocaleString('id-ID')}</span>
+                              </div>
+                              <div class="flex justify-between items-center text-xs">
+                                <span class="flex items-center gap-1.5"><span class="w-2.5 h-2.5 rounded-full" style="background: ${dayColors[day]?.unplan}"></span> Unplanned</span>
+                                <span class="font-bold text-gray-800">${unplan.toLocaleString('id-ID')}</span>
+                              </div>
+                              <div class="flex justify-between items-center text-xs pt-1.5 mt-1.5 border-t border-gray-100">
+                                <span class="font-bold text-gray-600">Total Output</span>
+                                <span class="font-extrabold text-blue-600">${totalActual.toLocaleString('id-ID')}</span>
+                              </div>
+                            </div>
+                            ${warningBox}
+                          </div>
+                        `;
                       }
                     },
                     dataLabels: {

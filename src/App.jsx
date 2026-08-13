@@ -4,6 +4,7 @@ import DashboardLayout from './layouts/DashboardLayout';
 import ProgressDashboard from './pages/ProgressDashboard';
 import DetailArea from './pages/DetailArea';
 import ProcessingTime from './pages/ProcessingTime';
+import ProductionMonitoring from './pages/ProductionMonitoring';
 import Settings from './pages/Settings';
 import { FilterProvider } from './contexts/FilterContext';
 import { FolderSyncProvider } from './contexts/FolderSyncContext';
@@ -30,6 +31,7 @@ function App() {
             <Route index element={<ProgressDashboard />} />
             <Route path="detail-area" element={<DetailArea />} />
             <Route path="processing-time" element={<ProcessingTime />} />
+            <Route path="production-monitoring" element={<ProductionMonitoring />} />
             <Route path="settings" element={<Settings />} />
           </Route>
         </Routes>

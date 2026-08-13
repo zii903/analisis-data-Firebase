@@ -152,6 +152,7 @@ export default function Settings() {
           <Link to="/" className="hover:text-gray-900 transition-colors">Progress Dashboard</Link>
           <Link to="/detail-area" className="hover:text-gray-900 transition-colors">Detail Area</Link>
           <Link to="/processing-time" className="hover:text-gray-900 transition-colors">Processing Time</Link>
+          <Link to="/production-monitoring" className="hover:text-gray-900 transition-colors">Monitoring</Link>
         </div>
       </header>
 
