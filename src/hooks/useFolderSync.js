@@ -5,7 +5,7 @@ import { parseExcelFile } from '../services/excelParser';
 export function useFolderSync() {
   // Naikkan versi ini setiap kali logika parsing/worker berubah
   // agar cache IDB lama otomatis invalid dan file di-parse ulang
-  const WORKER_VERSION = 'v12';
+  const WORKER_VERSION = 'v15';
   const [isWatching, setIsWatching] = useState(false);
   const [isSyncing, setIsSyncing] = useState(false);  
   const [statusText, setStatusText] = useState('Standby');
@@ -178,11 +178,35 @@ export function useFolderSync() {
     await processFile(fileObj, true);
   };
 
+  const resolveFileHandle = async (dirHandle, path) => {
+    const parts = path.replace(/\\/g, '/').split('/');
+    let currentHandle = dirHandle;
+    for (let i = 0; i < parts.length - 1; i++) {
+      currentHandle = await currentHandle.getDirectoryHandle(parts[i]);
+    }
+    return await currentHandle.getFileHandle(parts[parts.length - 1]);
+  };
+
   const processFile = async (fileObj, forceSync = false) => {
     if (isProcessingRef.current) return;
     
     try {
-      const file = await fileObj.handle.getFile();
+      let file;
+      try {
+        if (!dirHandleRef.current) throw new Error("No dir handle");
+        // ALWAYS re-resolve handle to get fresh metadata (bypassing Chrome cache)
+        const newHandle = await resolveFileHandle(dirHandleRef.current, fileObj.path);
+        fileObj.handle = newHandle;
+        file = await newHandle.getFile();
+      } catch (err) {
+        if (err.name === 'NotFoundError' || err.name === 'NotAllowedError') {
+          // File might be temporarily locked or swapped by MS Excel safe save
+          console.warn("File temporary unavailable, skipping this poll:", err.name);
+          return;
+        }
+        throw err;
+      }
+      
       const lastMod = file.lastModified;
       const fileSize = file.size;
       // Use both lastModified AND size as cache key to detect changes reliably

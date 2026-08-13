@@ -144,6 +144,7 @@ self.onmessage = (e) => {
         if (!proNumber || String(proNumber).trim() === '') proNumber = `DRAFT-ROW-${idx}`;
 
         const qtyOrder = qtyOrderIdx !== -1 ? cleanNum(row[qtyOrderIdx]) : 0;
+
         const stock = stockIdx !== -1 ? cleanNum(row[stockIdx]) : 0;
         const qtyProduksi = qtyProduksiIdx !== -1 ? cleanNum(row[qtyProduksiIdx]) : 0;
         const customer = customerIdx !== -1 ? (row[customerIdx] || null) : null;

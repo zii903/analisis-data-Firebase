@@ -1,133 +1,21 @@
-import { useEffect, useState, useMemo, useRef } from 'react';
-import { get } from 'idb-keyval';
+import { useState, useMemo } from 'react';
 import { useFilter } from '../contexts/FilterContext';
 import { useFolderSyncContext } from '../contexts/FolderSyncContext';
+import { useMachineData } from '../hooks/useMachineData';
+import { formatDurasi } from '../utils/constants';
 import { Search, FileText, Settings2, BarChart2, Circle, X, Factory } from 'lucide-react';
 import { Link } from 'react-router-dom';
 
 export default function ProcessingTime() {
-  const [loading, setLoading] = useState(false);
-  const [machines, setMachines] = useState([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedMachine, setSelectedMachine] = useState(null);
   const [modalSearchTerm, setModalSearchTerm] = useState('');
+  
   const { selectedFile } = useFilter();
   const { isSyncing, needsPermission, startWatching } = useFolderSyncContext();
+  const { machineStats: machines, loading } = useMachineData();
 
-  // Hanya trigger fetch saat isSyncing selesai (true→false), bukan setiap perubahan
-  const prevIsSyncing = useRef(false);
-
-  useEffect(() => {
-    const fetchData = async () => {
-      if (!selectedFile) {
-        setMachines([]);
-        return;
-      }
-      try {
-        setLoading(true);
-        const safeId = selectedFile.replace(/[\/\\]/g, '_');
-        const rows = await get(`file_data_${safeId}`) || [];
-
-        const grouped = {};
-        rows.forEach((row, index) => {
-          const area = row.machine_name || 'Unknown';
-          const ct = Number(row.cycle_time || 0);
-          const time = Number(row.waktu_proses || 0);
-          const estimasi = Number(row.estimasi_sisa_waktu || 0);
-          const subMachine = row.sub_machine || null;
-
-          if (!grouped[area]) {
-            grouped[area] = {
-              name: area,
-              items: 0,
-              ctItems: 0,
-              time: 0,
-              estimasiSisaWaktu: 0,
-              subMachines: {},
-              materials: [],
-            };
-          }
-
-          const g = grouped[area];
-          g.items += 1;
-          if (ct > 0) g.ctItems += 1;
-          if (time > 0) g.time += time;
-          g.estimasiSisaWaktu += estimasi;
-
-          if (subMachine && time > 0) {
-            g.subMachines[subMachine] = (g.subMachines[subMachine] || 0) + time;
-          }
-
-          g.materials.push({
-            id: `row_${index}`,
-            area,
-            subMachine,
-            ct: ct > 0 ? ct : null,
-            time: time > 0 ? time : null,
-            status: row.status || 'UNPLAN',
-            customer: row.customer || '',
-            proNumber: row.pro_number || '',
-            description: row.description || '',
-            qtyOrder: row.qty_order || 0,
-            qtyProduksi: row.qty_produksi || 0,
-            estimasiSisaWaktu: estimasi,
-            variant: Number(row.variant || 0),
-          });
-        });
-
-        setMachines(Object.values(grouped));
-      } catch (err) {
-        console.error("Error fetching data:", err);
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchData();
-  }, [selectedFile]); // hanya re-fetch saat file berubah
-
-  // Re-fetch hanya saat sync SELESAI (isSyncing: true → false)
-  useEffect(() => {
-    if (prevIsSyncing.current === true && isSyncing === false) {
-      const fetchData = async () => {
-        if (!selectedFile) return;
-        try {
-          const safeId = selectedFile.replace(/[\/\\]/g, '_');
-          const rows = await get(`file_data_${safeId}`) || [];
-          const grouped = {};
-          rows.forEach((row, index) => {
-            const area = row.machine_name || 'Unknown';
-            const ct = Number(row.cycle_time || 0);
-            const time = Number(row.waktu_proses || 0);
-            const estimasi = Number(row.estimasi_sisa_waktu || 0);
-            const subMachine = row.sub_machine || null;
-            if (!grouped[area]) {
-              grouped[area] = { name: area, items: 0, ctItems: 0, time: 0, estimasiSisaWaktu: 0, subMachines: {}, materials: [] };
-            }
-            const g = grouped[area];
-            g.items += 1;
-            if (ct > 0) g.ctItems += 1;
-            if (time > 0) g.time += time;
-            g.estimasiSisaWaktu += estimasi;
-            if (subMachine && time > 0) g.subMachines[subMachine] = (g.subMachines[subMachine] || 0) + time;
-            g.materials.push({
-              id: `row_${index}`, area, subMachine,
-              ct: ct > 0 ? ct : null, time: time > 0 ? time : null,
-              status: row.status || 'UNPLAN', customer: row.customer || '',
-              proNumber: row.pro_number || '', description: row.description || '',
-              qtyOrder: row.qty_order || 0, qtyProduksi: row.qty_produksi || 0,
-              estimasiSisaWaktu: estimasi, variant: Number(row.variant || 0),
-            });
-          });
-          setMachines(Object.values(grouped));
-        } catch (err) { console.error("Error re-fetching:", err); }
-      };
-      fetchData();
-    }
-    prevIsSyncing.current = isSyncing;
-  }, [isSyncing, selectedFile]);
-
-  const displayFileName = selectedFile ? selectedFile.split(/[\/\\]/).pop() : 'Belum ada file';
+  const displayFileName = selectedFile ? selectedFile.split(/[\\/]/).pop() : 'Belum ada file';
 
   // useMemo agar tidak re-komputasi setiap render
   const filteredMachines = useMemo(
@@ -136,22 +24,13 @@ export default function ProcessingTime() {
   );
 
   const { grandTotalEstimasi, grandTotalJam, grandTotalMenit } = useMemo(() => {
-    const total = machines.reduce((sum, m) => sum + (m.estimasiSisaWaktu || 0), 0);
+    const total = machines.reduce((sum, m) => sum + (m.estimasiSisaWaktuTotal || 0), 0);
     return {
       grandTotalEstimasi: total,
       grandTotalJam: Math.floor(total),
       grandTotalMenit: Math.round((total - Math.floor(total)) * 60),
     };
   }, [machines]);
-
-  // Format jam:menit — stabil, tidak perlu useMemo
-  const formatDurasi = (totalJam) => {
-    if (totalJam <= 0) return '0 Jam';
-    const jam = Math.floor(totalJam);
-    const menit = Math.round((totalJam - jam) * 60);
-    if (menit === 0) return `${jam.toLocaleString('id-ID')} Jam`;
-    return `${jam.toLocaleString('id-ID')} Jam ${menit} Menit`;
-  };
 
   const renderModal = () => {
     if (!selectedMachine) return null;
@@ -424,23 +303,23 @@ export default function ProcessingTime() {
 
                 <div className="mb-5">
                   <p className="text-[10px] font-extrabold text-gray-400 mb-1 uppercase tracking-wider">WAKTU PROSES</p>
-                  {machine.time > 0 ? (
-                    <p className="text-xl font-extrabold text-blue-500">{machine.time.toLocaleString('id-ID', { maximumFractionDigits: 2 })} <span className="text-sm font-bold">jam</span></p>
+                  {machine.procTimeTotal > 0 ? (
+                    <p className="text-xl font-extrabold text-blue-500">{machine.procTimeTotal.toLocaleString('id-ID', { maximumFractionDigits: 2 })} <span className="text-sm font-bold">jam</span></p>
                   ) : (
                     <p className="text-sm font-semibold text-gray-400">Tidak ada data</p>
                   )}
                 </div>
 
-                {machine.estimasiSisaWaktu > 0 && (
+                {machine.estimasiSisaWaktuTotal > 0 && (
                   <div className="mb-4 bg-gray-50 border border-gray-200 rounded-xl px-5 py-3 flex items-center justify-between">
                     <div>
                       <p className="text-[10px] font-extrabold text-gray-500 uppercase tracking-wider mb-0.5">⏱ ESTIMASI SISA WAKTU</p>
                       <p className="text-lg font-black text-gray-900">
-                        {formatDurasi(machine.estimasiSisaWaktu)}
+                        {formatDurasi(machine.estimasiSisaWaktuTotal)}
                       </p>
                     </div>
                     <span className="text-xs font-bold text-gray-600 bg-gray-200 px-2 py-1 rounded-full">
-                      {machine.estimasiSisaWaktu.toLocaleString('id-ID', { maximumFractionDigits: 2 })} Jam
+                      {machine.estimasiSisaWaktuTotal.toLocaleString('id-ID', { maximumFractionDigits: 2 })} Jam
                     </span>
                   </div>
                 )}

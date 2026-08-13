@@ -1,133 +1,63 @@
-import React, { useEffect, useState, useRef } from 'react';
+import React, { useEffect, useState, useRef, useMemo } from 'react';
 
 let isFirstAppLoad_ProgressDashboard = true;
-import { get } from 'idb-keyval';
 import ReactApexChart from 'react-apexcharts';
 import { useFilter } from '../contexts/FilterContext';
 import { useFolderSyncContext } from '../contexts/FolderSyncContext';
+import { useMachineData } from '../hooks/useMachineData';
+import { daysKeys } from '../utils/constants';
 import { FileText, Clock, Settings2, Circle, Factory } from 'lucide-react';
 import { Link } from 'react-router-dom';
 
 export default function ProgressDashboard() {
-  const [loading, setLoading] = useState(false);
   const [chartData, setChartData] = useState([]);
   const [availableDays, setAvailableDays] = useState([]);
   const [animateChart, setAnimateChart] = useState(false);
   const [selectedDayFilter, setSelectedDayFilter] = useState('Semua Hari');
-  const [rawRows, setRawRows] = useState([]);
+  
   const { selectedFile } = useFilter();
+  const { isSyncing, needsPermission, startWatching } = useFolderSyncContext();
+  const { machineStats, rawRows, loading } = useMachineData();
 
   const isFirstComponentMount = useRef(true);
   const prevDataStr = useRef('');
   const prevValuesRef = useRef({});
   const hasDataChangedRef = useRef(false);
 
-  const { isSyncing, needsPermission, startWatching } = useFolderSyncContext();
-
   useEffect(() => {
-    if (isSyncing) return;
+    if (!machineStats || machineStats.length === 0) {
+      setChartData([]);
+      setAvailableDays([]);
+      return;
+    }
 
-    const fetchData = async () => {
-      if (!selectedFile) {
-        setChartData([]);
-        setRawRows([]);
-        return;
-      }
-      try {
-        setLoading(true);
-        const safeId = selectedFile.replace(/[\/\\]/g, '_');
-        const rows = await get(`file_data_${safeId}`) || [];
+    const formattedData = [];
+    const daysSet = new Set();
 
-        setRawRows(rows);
+    machineStats.forEach((machine) => {
+      let sumOutput = 0;
+      const dataItem = { name: machine.name };
 
-        const grouped = {};
-        rows.forEach((row) => {
-          const machineName = row.machine_name || 'Unknown';
-          if (!grouped[machineName]) grouped[machineName] = [];
-          grouped[machineName].push(row);
-        });
+      daysKeys.forEach(dk => {
+        const dayTotal = machine.daily[dk].total || 0;
+        if (dayTotal > 0) daysSet.add(dk);
+        sumOutput += dayTotal;
 
-        const formattedData = [];
-        const daysSet = new Set();
-        const daysKeys = ['Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat', 'Sabtu', 'Minggu'];
+        dataItem[`${dk}_Planned`] = machine.daily[dk].planned || 0;
+        dataItem[`${dk}_Unplan`] = machine.daily[dk].unplan || 0;
+      });
 
-        for (const [machineName, rows] of Object.entries(grouped)) {
-          let totalOrder = 0;
-          const totalOutputPerKey = {};
-          const plannedOutput = {};
-          const unplanOutput = {};
+      const remaining = machine.target - sumOutput;
+      dataItem.RemainingOrder = remaining > 0 ? Math.round(remaining) : 0;
+      dataItem.TargetStr = Math.round(machine.target).toLocaleString('id-ID');
 
-          daysKeys.forEach(d => {
-            totalOutputPerKey[d] = 0;
-            plannedOutput[d] = 0;
-            unplanOutput[d] = 0;
-          });
+      formattedData.push(dataItem);
+    });
 
-          const seenMaterials = {};
-
-          rows.forEach(row => {
-            const daily = typeof row.daily_details === 'string' ? JSON.parse(row.daily_details) : row.daily_details;
-            const excelRowIdx = daily?.excel_row_index || 0;
-            const materialKey = `${row.customer}_${row.pro_number}_${row.description}_${row.qty_produksi}_${excelRowIdx}`;
-            const statusRaw = (row.status || '').toString().trim().toLowerCase();
-
-            if (!seenMaterials[materialKey]) {
-              if ((statusRaw.includes('plan') && !statusRaw.includes('unplan')) || statusRaw.includes('backlog')) {
-                totalOrder += Number(row.qty_produksi || 0);
-              }
-              seenMaterials[materialKey] = true;
-            }
-
-            if (daily) {
-              for (const [k, v] of Object.entries(daily)) {
-                if (typeof v === 'number' || (typeof v === 'string' && !isNaN(Number(v)))) {
-                  for (const dk of daysKeys) {
-                    if (k.trim().toLowerCase().startsWith(dk.toLowerCase())) {
-                      const val = Number(v);
-                      totalOutputPerKey[dk] += val;
-                      if (row.status === 'UNPLAN') {
-                        unplanOutput[dk] += val;
-                      } else {
-                        plannedOutput[dk] += val;
-                      }
-                      break;
-                    }
-                  }
-                }
-              }
-            }
-          });
-
-          let sumOutput = 0;
-          const dataItem = { name: machineName };
-
-          daysKeys.forEach(dk => {
-            if (totalOutputPerKey[dk] > 0) daysSet.add(dk);
-            sumOutput += totalOutputPerKey[dk];
-
-            dataItem[`${dk}_Planned`] = plannedOutput[dk] || 0;
-            dataItem[`${dk}_Unplan`] = unplanOutput[dk] || 0;
-          });
-
-          const remaining = totalOrder - sumOutput;
-          dataItem.RemainingOrder = remaining > 0 ? Math.round(remaining) : 0;
-          dataItem.TargetStr = Math.round(totalOrder).toLocaleString('id-ID');
-
-          formattedData.push(dataItem);
-        }
-
-        const sortedDays = daysKeys.filter(d => daysSet.has(d));
-        setAvailableDays(sortedDays);
-        setChartData(formattedData);
-      } catch (err) {
-        console.error("Error fetching data: ", err);
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchData();
-  }, [selectedFile, isSyncing]);
+    const sortedDays = daysKeys.filter(d => daysSet.has(d));
+    setAvailableDays(sortedDays);
+    setChartData(formattedData);
+  }, [machineStats]);
 
   useEffect(() => {
     if (chartData && chartData.length > 0) {

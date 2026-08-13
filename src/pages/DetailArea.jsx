@@ -1,159 +1,29 @@
-import { useEffect, useState, useRef } from 'react';
+import { useEffect, useState, useRef, useMemo } from 'react';
 
 let isFirstAppLoad_DetailArea = true;
-import { get } from 'idb-keyval';
 import { Search, Clock, BarChart2, Settings2, Circle, X, Factory } from 'lucide-react';
 import { useFilter } from '../contexts/FilterContext';
 import { useFolderSyncContext } from '../contexts/FolderSyncContext';
+import { useMachineData } from '../hooks/useMachineData';
+import { daysKeys, dayColors, formatDurasi } from '../utils/constants';
 import { Link } from 'react-router-dom';
 
-const daysKeys = ['Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat', 'Sabtu', 'Minggu'];
-const dayColors = {
-  Senin: '#3B82F6',
-  Selasa: '#10B981',
-  Rabu: '#EAB308',
-  Kamis: '#F97316',
-  Jumat: '#8B5CF6',
-  Sabtu: '#EC4899',
-  Minggu: '#EF4444',
-};
-
-const formatDurasi = (totalJam) => {
-  if (!totalJam || totalJam <= 0) return '0 Jam';
-  const jam = Math.floor(totalJam);
-  const menit = Math.round((totalJam - jam) * 60);
-  if (jam === 0) return `${menit} Menit`;
-  if (menit === 0) return `${jam.toLocaleString('id-ID')} Jam`;
-  return `${jam.toLocaleString('id-ID')} Jam ${menit} Menit`;
-};
-
 export default function DetailArea() {
-  const [loading, setLoading] = useState(false);
-  const [groupedData, setGroupedData] = useState([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [animateBars, setAnimateBars] = useState(false);
   const [selectedDay, setSelectedDay] = useState('Semua Hari');
   const [selectedMachine, setSelectedMachine] = useState(null);
   const [modalTab, setModalTab] = useState('Planned');
   const [modalSearchTerm, setModalSearchTerm] = useState('');
+  
   const { selectedFile } = useFilter();
   const { isSyncing, needsPermission, startWatching } = useFolderSyncContext();
+  const { machineStats: groupedData, loading } = useMachineData();
 
   const isFirstComponentMount = useRef(true);
   const prevDataStr = useRef('');
   const prevValuesRef = useRef({});
   const hasDataChangedRef = useRef(false);
-
-  useEffect(() => {
-    if (isSyncing) return;
-
-    const fetchData = async () => {
-      if (!selectedFile) {
-        setGroupedData([]);
-        return;
-      }
-      try {
-        setLoading(true);
-        const safeId = selectedFile.replace(/[\/\\]/g, '_');
-        const rows = await get(`file_data_${safeId}`) || [];
-        const grouped = {};
-        rows.forEach((row) => {
-          const machineName = row.machine_name || 'Unknown';
-          if (!grouped[machineName]) {
-            grouped[machineName] = {
-              area: machineName,
-              target: 0,
-              procTimeTotal: 0,
-              estimasiSisaWaktuTotal: 0,
-              seenMaterials: new Set(),
-              materialsDict: {},
-              daily: {
-                Senin: { planned: 0, unplan: 0, total: 0 },
-                Selasa: { planned: 0, unplan: 0, total: 0 },
-                Rabu: { planned: 0, unplan: 0, total: 0 },
-                Kamis: { planned: 0, unplan: 0, total: 0 },
-                Jumat: { planned: 0, unplan: 0, total: 0 },
-                Sabtu: { planned: 0, unplan: 0, total: 0 },
-                Minggu: { planned: 0, unplan: 0, total: 0 }
-              }
-            };
-          }
-
-          const g = grouped[machineName];
-          const daily = typeof row.daily_details === 'string' ? JSON.parse(row.daily_details) : row.daily_details;
-          const excelRowIdx = daily?.excel_row_index || 0;
-          const materialKey = `${row.customer}_${row.pro_number}_${row.description}_${row.qty_produksi}_${excelRowIdx}`;
-          const statusRaw = (row.status || '').toString().trim().toLowerCase();
-          const isPlanned = (statusRaw.includes('plan') && !statusRaw.includes('unplan')) || statusRaw.includes('backlog');
-          const estWaktu = Number(row.estimasi_sisa_waktu || 0);
-
-          if (machineName.toLowerCase().includes('hf endcap')) {
-             console.log("DEBUG HF Endcap Row:", {
-                statusRaw,
-                isPlanned,
-                qty_produksi: row.qty_produksi,
-                excelRowIdx,
-                materialKey,
-                hasSeen: g.seenMaterials.has(materialKey)
-             });
-          }
-
-          if (!g.seenMaterials.has(materialKey)) {
-            if (isPlanned) {
-              g.target += Number(row.qty_produksi || 0);
-            }
-            g.seenMaterials.add(materialKey);
-
-            g.materialsDict[materialKey] = {
-              key: materialKey,
-              status: row.status || '',
-              isPlanned,
-              customer: row.customer || '',
-              proNumber: row.pro_number || '',
-              description: row.description || '',
-              qtyProduksi: Number(row.qty_produksi || 0),
-              estimasiSisaWaktu: estWaktu,
-              dailyActuals: {
-                Senin: 0, Selasa: 0, Rabu: 0, Kamis: 0, Jumat: 0, Sabtu: 0, Minggu: 0
-              }
-            };
-            g.estimasiSisaWaktuTotal += estWaktu;
-          }
-
-          const mat = g.materialsDict[materialKey];
-          g.procTimeTotal += Number(row.waktu_proses || 0);
-
-          if (daily) {
-            for (const [k, v] of Object.entries(daily)) {
-              if (typeof v === 'number' || (typeof v === 'string' && !isNaN(Number(v)))) {
-                for (const dk of daysKeys) {
-                  if (k.trim().toLowerCase().startsWith(dk.toLowerCase())) {
-                    const val = Number(v);
-                    g.daily[dk].total += val;
-                    mat.dailyActuals[dk] += val;
-                    if (isPlanned) {
-                      g.daily[dk].planned += val;
-                    } else {
-                      g.daily[dk].unplan += val;
-                    }
-                    break;
-                  }
-                }
-              }
-            }
-          }
-        });
-
-        setGroupedData(Object.values(grouped));
-      } catch (err) {
-        console.error("Error fetching data:", err);
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchData();
-  }, [selectedFile, isSyncing]);
 
   useEffect(() => {
     if (groupedData && groupedData.length > 0) {
@@ -262,7 +132,7 @@ export default function DetailArea() {
     const progress = g.target > 0 ? Math.round((totalActual / g.target) * 100) : 0;
 
     return {
-      area: g.area,
+      area: g.name,
       target: g.target,
       actual: totalActual,
       remaining: remaining > 0 ? remaining : 0,
@@ -583,7 +453,7 @@ export default function DetailArea() {
                     return (
                       <div
                         key={day}
-                        style={{ width: `${widthPercent}%`, backgroundColor: dayColors[day] }}
+                        style={{ width: `${widthPercent}%`, backgroundColor: dayColors[day].base }}
                         className="h-full transition-all duration-[1500ms] ease-[cubic-bezier(0.34,1.56,0.64,1)]"
                       ></div>
                     );
