@@ -227,7 +227,7 @@ export default function ProgressDashboard() {
           </Link>
           <Link to="/processing-time" className="flex items-center space-x-1.5 px-3.5 py-1.5 border border-gray-200 rounded-lg text-xs font-semibold text-gray-700 bg-white hover:bg-gray-50 shadow-xs transition-colors">
             <Clock className="w-3.5 h-3.5" />
-            <span>Processing Time</span>
+            <span>Processing Timee</span>
           </Link>
           <Link to="/production-monitoring" className="flex items-center space-x-1.5 px-3.5 py-1.5 border border-gray-200 rounded-lg text-xs font-semibold text-gray-700 bg-white hover:bg-gray-50 shadow-xs transition-colors">
             <Activity className="w-3.5 h-3.5" />
