@@ -95,6 +95,7 @@ export function useMachineData() {
             area: machineName,
             subMachine,
             status: row.status || 'UNPLAN',
+            rawStatus: row.raw_status || row.status || 'UNPLAN',
             isPlanned,
             customer: row.customer || '',
             proNumber: row.pro_number || '',

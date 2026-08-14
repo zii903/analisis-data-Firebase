@@ -1,6 +1,6 @@
 import { useState, useMemo, useEffect } from 'react';
 import { set, clear } from 'idb-keyval';
-import { Settings as SettingsIcon, FolderOpen, Check, Play, Square, AlertCircle, Loader, Circle, X } from 'lucide-react';
+import { Settings2, FolderOpen, Check, Play, Square, AlertCircle, Loader, Circle, X, BarChart2, FileText, Clock, Activity } from 'lucide-react';
 import { useFilter } from '../contexts/FilterContext';
 import { useFolderSyncContext } from '../contexts/FolderSyncContext';
 import { Link } from 'react-router-dom';
@@ -85,29 +85,15 @@ export default function Settings() {
   };
 
   const handleClearDatabase = async () => {
-    if (window.confirm('Apakah Anda yakin ingin menghapus semua data yang tersimpan di database lokal? Ini akan menghapus semua riwayat sinkronisasi dan data file utama.')) {
+    if (window.confirm("PERINGATAN: Tindakan ini akan mengosongkan SELURUH database indexedDB lokal, termasuk data cache produksi, status file, dan riwayat. Apakah Anda yakin ingin melanjutkan?")) {
       try {
-        stopWatching(); // Hentikan proses sinkronisasi yang mungkin sedang berjalan
-        
-        // Tunggu sedikit untuk memastikan tidak ada penulisan data yang sedang berlangsung
-        await new Promise(resolve => setTimeout(resolve, 500));
-        
-        await clear(); // Hapus data dari idb-keyval
-        
-        // Hapus juga cache storage jika ada
+        stopWatching();
+        await new Promise(resolve => setTimeout(resolve, 300));
+        await clear();
         localStorage.clear();
         sessionStorage.clear();
-        
-        // Coba hapus database IndexedDB secara paksa sebagai tambahan
-        if (window.indexedDB && window.indexedDB.databases) {
-           const dbs = await window.indexedDB.databases();
-           dbs.forEach(db => { window.indexedDB.deleteDatabase(db.name) });
-        } else {
-           window.indexedDB.deleteDatabase('keyval-store');
-        }
-        
-        alert('Database berhasil dikosongkan! Halaman akan dimuat ulang.');
-        window.location.replace('/'); // Redirect ke halaman utama saat memuat ulang
+        alert('Database berhasil dikosongkan. Halaman akan dimuat ulang.');
+        window.location.replace('/');
       } catch (err) {
         console.error("Gagal mengosongkan database:", err);
         alert('Gagal mengosongkan database.');
@@ -125,38 +111,53 @@ export default function Settings() {
   else if (selectedYear) activeStep = 'month';
 
   return (
-    <div className="flex flex-col min-h-screen bg-[#F5F6F8]">
-      <header className="bg-white h-20 px-8 flex items-center justify-between border-b border-gray-200 shadow-sm relative">
+    <div className="flex flex-col h-full bg-[#F5F6F8] overflow-hidden select-none">
+      <header className="bg-white h-16 px-6 flex items-center justify-between border-b border-gray-200 shadow-sm relative shrink-0">
         <div className="flex items-center space-x-3">
-          <div className="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center">
-            <SettingsIcon className="w-5 h-5 text-blue-600" />
+          <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-blue-600 to-indigo-700 flex items-center justify-center text-white shadow-md shadow-blue-500/20 flex-shrink-0">
+            <Settings2 className="w-5 h-5" />
           </div>
-          <h1 className="text-xl font-extrabold text-gray-900">Pengaturan</h1>
-        </div>
+          <div className="flex flex-col justify-center">
+            <h1 className="text-lg font-extrabold text-gray-900 leading-none">Pengaturan</h1>
+            <p className="text-[10px] text-gray-500 font-bold tracking-[0.15em] mt-1 uppercase">Konfigurasi & Sinkronisasi</p>
+          </div>
 
-        {/* Centered Live / Sync Indicator */}
-        <div className="absolute left-1/2 transform -translate-x-1/2 flex items-center space-x-3">
-          <div className="flex items-center space-x-2 px-4 py-1.5 border rounded-full text-sm font-bold shadow-sm transition-colors duration-300 bg-white"
-               style={{ borderColor: isSyncing ? '#FDBA74' : '#BBF7D0', color: isSyncing ? '#F97316' : '#22C55E' }}>
-            <Circle className={`w-3 h-3 ${isSyncing ? 'animate-pulse' : ''}`} style={{ fill: isSyncing ? '#F97316' : '#22C55E' }} />
-            <span>{isSyncing ? 'Sinkronisasi...' : 'Live'}</span>
-          </div>
-          {lastSyncTime && (
-            <div className="px-4 py-1.5 border border-gray-200 rounded-full text-xs font-semibold text-gray-500 bg-white shadow-sm flex items-center space-x-1">
-              <span>Terakhir Sinkron: {lastSyncTime.toLocaleString('id-ID', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric', hour: '2-digit', minute: '2-digit', second: '2-digit' })}</span>
+          {/* Live & Last Sync Status Badge safely placed on the left next to title */}
+          <div className="hidden sm:flex items-center space-x-2 pl-3 border-l border-gray-200 ml-1">
+            <div className="flex items-center space-x-1.5 px-3 py-1 border rounded-full text-xs font-bold shadow-xs bg-white"
+                 style={{ borderColor: isSyncing ? '#FDBA74' : '#BBF7D0', color: isSyncing ? '#F97316' : '#22C55E' }}>
+              <Circle className={`w-2 h-2 ${isSyncing ? 'animate-pulse' : ''}`} style={{ fill: isSyncing ? '#F97316' : '#22C55E' }} />
+              <span>{isSyncing ? 'Sinkronisasi...' : 'Live'}</span>
             </div>
-          )}
+            {lastSyncTime && (
+              <div className="px-2.5 py-1 border border-gray-200 rounded-full text-[11px] font-semibold text-gray-500 bg-white shadow-xs">
+                Terakhir: {lastSyncTime.toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' })}
+              </div>
+            )}
+          </div>
         </div>
         
-        <div className="flex items-center space-x-8 text-sm font-semibold text-gray-500">
-          <Link to="/" className="hover:text-gray-900 transition-colors">Progress Dashboard</Link>
-          <Link to="/detail-area" className="hover:text-gray-900 transition-colors">Detail Area</Link>
-          <Link to="/processing-time" className="hover:text-gray-900 transition-colors">Processing Time</Link>
-          <Link to="/production-monitoring" className="hover:text-gray-900 transition-colors">Monitoring</Link>
+        <div className="flex items-center space-x-2">
+          <Link to="/" className="flex items-center space-x-1.5 px-3.5 py-1.5 border border-gray-200 rounded-lg text-xs font-semibold text-gray-700 bg-white hover:bg-gray-50 shadow-xs transition-colors">
+            <BarChart2 className="w-3.5 h-3.5" />
+            <span>Chart Dashboard</span>
+          </Link>
+          <Link to="/detail-area" className="flex items-center space-x-1.5 px-3.5 py-1.5 border border-gray-200 rounded-lg text-xs font-semibold text-gray-700 bg-white hover:bg-gray-50 shadow-xs transition-colors">
+            <FileText className="w-3.5 h-3.5" />
+            <span>Detail Area</span>
+          </Link>
+          <Link to="/processing-time" className="flex items-center space-x-1.5 px-3.5 py-1.5 border border-gray-200 rounded-lg text-xs font-semibold text-gray-700 bg-white hover:bg-gray-50 shadow-xs transition-colors">
+            <Clock className="w-3.5 h-3.5" />
+            <span>Processing Time</span>
+          </Link>
+          <Link to="/production-monitoring" className="flex items-center space-x-1.5 px-3.5 py-1.5 border border-gray-200 rounded-lg text-xs font-semibold text-gray-700 bg-white hover:bg-gray-50 shadow-xs transition-colors">
+            <Activity className="w-3.5 h-3.5" />
+            <span>Monitoring</span>
+          </Link>
         </div>
       </header>
 
-      <div className="p-8 flex-1 flex justify-center overflow-y-auto">
+      <div className="p-4 sm:p-6 flex-1 flex justify-center overflow-y-auto min-h-0">
         <div className="w-full max-w-5xl">
           <div className="mb-4">
             <h2 className="text-2xl font-extrabold text-gray-900 mb-1 tracking-tight">Pengaturan Sinkronisasi</h2>

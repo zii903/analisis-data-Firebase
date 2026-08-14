@@ -1,7 +1,7 @@
-import { useEffect, useState, useRef, useMemo } from 'react';
+import { useEffect, useState, useRef } from 'react';
 
 let isFirstAppLoad_DetailArea = true;
-import { Search, Clock, BarChart2, Settings2, Circle, X, Factory, Activity } from 'lucide-react';
+import { Search, Clock, BarChart2, Settings2, X, Factory, Activity } from 'lucide-react';
 import { useFilter } from '../contexts/FilterContext';
 import { useFolderSyncContext } from '../contexts/FolderSyncContext';
 import { useMachineData } from '../hooks/useMachineData';
@@ -17,8 +17,8 @@ export default function DetailArea() {
   const [modalSearchTerm, setModalSearchTerm] = useState('');
   
   const { selectedFile } = useFilter();
-  const { isSyncing, needsPermission, startWatching } = useFolderSyncContext();
-  const { machineStats: groupedData, loading } = useMachineData();
+  const { needsPermission, startWatching } = useFolderSyncContext();
+  const { machineStats: groupedData } = useMachineData();
 
   const isFirstComponentMount = useRef(true);
   const prevDataStr = useRef('');
@@ -170,86 +170,112 @@ export default function DetailArea() {
     }
 
     return (
-      <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50">
-        <div className="bg-white rounded-2xl shadow-xl w-full max-w-6xl max-h-[90vh] flex flex-col overflow-hidden animate-in fade-in zoom-in duration-200">
+      <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-6 bg-black/60 backdrop-blur-xs">
+        <div className="bg-white rounded-2xl shadow-2xl w-full max-w-6xl h-[88vh] max-h-[88vh] flex flex-col overflow-hidden animate-in fade-in zoom-in duration-150">
 
-          <div className="flex items-center justify-between p-6 border-b border-gray-100">
-            <h2 className="text-3xl font-bold text-gray-900">{selectedMachine.area}</h2>
-            <button onClick={() => setSelectedMachine(null)} className="p-2 text-gray-400 hover:text-gray-600 rounded-full hover:bg-gray-100 transition-colors">
-              <X className="w-6 h-6" />
+          {/* Compact Modal Header */}
+          <div className="flex items-center justify-between px-6 py-3.5 border-b border-gray-100 shrink-0 bg-white">
+            <div className="flex items-center space-x-3">
+              <div className="w-8 h-8 rounded-lg bg-blue-50 border border-blue-100 flex items-center justify-center text-blue-600 shadow-xs">
+                <Factory className="w-4 h-4" />
+              </div>
+              <div>
+                <h2 className="text-xl font-black text-gray-900 leading-tight">{selectedMachine.area}</h2>
+                <p className="text-[10px] text-gray-500 font-medium">Detail pengerjaan & daftar material lini produksi</p>
+              </div>
+            </div>
+            <button 
+              onClick={() => setSelectedMachine(null)} 
+              className="p-1.5 text-gray-400 hover:text-gray-700 rounded-lg hover:bg-gray-100 transition-colors"
+            >
+              <X className="w-5 h-5" />
             </button>
           </div>
 
-          <div className="p-6 bg-gray-50 flex flex-wrap items-stretch gap-4 border-b border-gray-100">
-            <div className="bg-white rounded-xl p-4 border border-gray-200 flex-1 min-w-[160px] flex flex-col items-center justify-center text-center shadow-sm">
-              <p className="text-[11px] font-bold text-gray-400 mb-2 tracking-widest uppercase">Target</p>
-              <p className="text-2xl font-bold text-gray-900">{selectedMachine.target.toLocaleString('id-ID', { maximumFractionDigits: 0 })}</p>
+          {/* Slim 4-Card Summary Bar */}
+          <div className="px-6 py-2.5 bg-gray-50/80 border-b border-gray-100 grid grid-cols-2 sm:grid-cols-4 gap-2.5 shrink-0">
+            <div className="bg-white rounded-xl p-2 px-3 border border-gray-200/90 flex flex-col items-center justify-center text-center shadow-xs">
+              <p className="text-[9px] font-extrabold text-gray-400 tracking-wider uppercase">TARGET</p>
+              <p className="text-lg font-black text-gray-900 leading-tight">{selectedMachine.target.toLocaleString('id-ID', { maximumFractionDigits: 0 })}</p>
             </div>
-            <div className="bg-white rounded-xl p-4 border border-gray-200 flex-1 min-w-[160px] flex flex-col items-center justify-center text-center shadow-sm">
-              <p className="text-[11px] font-bold text-gray-400 mb-2 tracking-widest uppercase">Actual Output</p>
-              <p className="text-2xl font-bold text-blue-500">{selectedMachine.actual.toLocaleString('id-ID', { maximumFractionDigits: 0 })}</p>
+            <div className="bg-white rounded-xl p-2 px-3 border border-gray-200/90 flex flex-col items-center justify-center text-center shadow-xs">
+              <p className="text-[9px] font-extrabold text-blue-500 tracking-wider uppercase">ACTUAL OUTPUT</p>
+              <p className="text-lg font-black text-blue-600 leading-tight">{selectedMachine.actual.toLocaleString('id-ID', { maximumFractionDigits: 0 })}</p>
             </div>
-            <div className="bg-white rounded-xl p-4 border border-gray-200 flex-1 min-w-[160px] flex flex-col items-center justify-center text-center shadow-sm">
-              <p className="text-[11px] font-bold text-gray-400 mb-2 tracking-widest uppercase">Remaining</p>
-              <p className="text-2xl font-bold text-gray-900">{selectedMachine.remaining.toLocaleString('id-ID', { maximumFractionDigits: 0 })}</p>
+            <div className="bg-white rounded-xl p-2 px-3 border border-gray-200/90 flex flex-col items-center justify-center text-center shadow-xs">
+              <p className="text-[9px] font-extrabold text-gray-400 tracking-wider uppercase">REMAINING</p>
+              <p className="text-lg font-black text-gray-900 leading-tight">{selectedMachine.remaining.toLocaleString('id-ID', { maximumFractionDigits: 0 })}</p>
             </div>
-            <div className="bg-white rounded-xl p-4 border border-gray-200 flex-1 min-w-[160px] flex flex-col items-center justify-center text-center shadow-sm">
-              <p className="text-[11px] font-bold text-gray-400 mb-2 tracking-widest uppercase">Total Processing Time</p>
-              <p className="text-2xl font-bold text-gray-900">{selectedMachine.procTime} <span className="text-sm text-gray-500 font-medium">Jam</span></p>
+            <div className="bg-white rounded-xl p-2 px-3 border border-gray-200/90 flex flex-col items-center justify-center text-center shadow-xs">
+              <p className="text-[9px] font-extrabold text-gray-400 tracking-wider uppercase">TOTAL PROC. TIME</p>
+              <p className="text-lg font-black text-gray-900 leading-tight">{selectedMachine.procTime} <span className="text-xs text-gray-500 font-medium">Jam</span></p>
             </div>
           </div>
 
-          <div className="p-6 border-b border-gray-100 space-y-4">
-            <div className="flex justify-between items-center">
-              <h3 className="font-bold text-gray-500 tracking-wider text-sm">DAFTAR MATERIAL</h3>
-              <span className="text-sm text-gray-500 bg-gray-100 px-3 py-1 rounded-full">Menampilkan: <span className="font-bold text-blue-600">{filteredMaterials.length}</span> Material</span>
-            </div>
-
-            <div className="relative">
-              <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 w-5 h-5" />
-              <input
-                type="text"
-                placeholder="Cari status, material, PRO, atau customer..."
-                className="w-full pl-12 pr-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white transition-all text-sm"
-                value={modalSearchTerm}
-                onChange={(e) => setModalSearchTerm(e.target.value)}
-              />
-            </div>
-
-            <div className="flex gap-4">
+          {/* Combined Tabs & Search Toolbar (Single compact row) */}
+          <div className="px-6 py-2.5 border-b border-gray-100 flex flex-col sm:flex-row items-center justify-between gap-3 shrink-0 bg-white">
+            <div className="flex items-center space-x-2">
               <button
                 onClick={() => setModalTab('Planned')}
-                className={`flex items-center gap-2 px-6 py-2 rounded-full text-sm font-bold transition-all border ${modalTab === 'Planned' ? 'bg-blue-50 text-blue-700 border-blue-200 shadow-sm' : 'bg-transparent text-gray-500 border-transparent hover:bg-gray-100'
-                  }`}
+                className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg text-xs font-bold transition-all border ${
+                  modalTab === 'Planned' 
+                    ? 'bg-blue-50 text-blue-700 border-blue-200 shadow-xs' 
+                    : 'bg-white text-gray-500 border-gray-200 hover:bg-gray-50'
+                }`}
               >
-                Planned
-                <span className={`px-2 py-0.5 rounded-full text-xs ${modalTab === 'Planned' ? 'bg-blue-600 text-white' : 'bg-gray-200 text-gray-600'}`}>{countPlanned}</span>
+                <span>Planned</span>
+                <span className={`px-1.5 py-0.2 rounded-full text-[10px] font-black ${
+                  modalTab === 'Planned' ? 'bg-blue-600 text-white' : 'bg-gray-100 text-gray-600'
+                }`}>{countPlanned}</span>
               </button>
+
               <button
                 onClick={() => setModalTab('Unplanned')}
-                className={`flex items-center gap-2 px-6 py-2 rounded-full text-sm font-bold transition-all border ${modalTab === 'Unplanned' ? 'bg-red-50 text-red-700 border-red-200 shadow-sm' : 'bg-transparent text-gray-500 border-transparent hover:bg-gray-100'
-                  }`}
+                className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg text-xs font-bold transition-all border ${
+                  modalTab === 'Unplanned' 
+                    ? 'bg-red-50 text-red-700 border-red-200 shadow-xs' 
+                    : 'bg-white text-gray-500 border-gray-200 hover:bg-gray-50'
+                }`}
               >
-                Unplanned
-                <span className={`px-2 py-0.5 rounded-full text-xs ${modalTab === 'Unplanned' ? 'bg-red-500 text-white' : 'bg-gray-200 text-gray-600'}`}>{countUnplanned}</span>
+                <span>Unplanned</span>
+                <span className={`px-1.5 py-0.2 rounded-full text-[10px] font-black ${
+                  modalTab === 'Unplanned' ? 'bg-red-500 text-white' : 'bg-gray-100 text-gray-600'
+                }`}>{countUnplanned}</span>
               </button>
+            </div>
+
+            <div className="flex items-center space-x-3 w-full sm:w-auto">
+              <span className="hidden md:inline-block text-xs font-semibold text-gray-500">
+                Menampilkan: <strong className="text-blue-600">{filteredMaterials.length}</strong> Material
+              </span>
+              <div className="relative w-full sm:w-72">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 w-3.5 h-3.5" />
+                <input
+                  type="text"
+                  placeholder="Cari status, material, PRO, customer..."
+                  className="w-full pl-8 pr-3 py-1.5 bg-gray-50 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white transition-all text-xs"
+                  value={modalSearchTerm}
+                  onChange={(e) => setModalSearchTerm(e.target.value)}
+                />
+              </div>
             </div>
           </div>
 
-          <div className="flex-1 overflow-auto">
-            <table className="w-full text-sm text-left">
-              <thead className="text-xs text-gray-400 font-bold uppercase tracking-wider bg-white sticky top-0 border-b border-gray-100 z-10 shadow-sm">
+          {/* Spacious Material Table (Takes ~75% of modal height) */}
+          <div className="flex-1 overflow-y-auto min-h-0 bg-white">
+            <table className="w-full text-xs text-left border-collapse">
+              <thead className="text-[11px] text-gray-400 font-bold uppercase tracking-wider bg-gray-50 sticky top-0 border-b border-gray-200 z-10">
                 <tr>
-                  <th className="px-6 py-4">Status</th>
-                  <th className="px-6 py-4">Customer / PRO</th>
-                  <th className="px-6 py-4">Material Description</th>
-                  <th className="px-6 py-4 text-right">Qty Prod</th>
-                  <th className="px-6 py-4 text-right">Actual</th>
-                  <th className="px-6 py-4 text-right">Remain</th>
-                  <th className="px-6 py-4 text-right">Est. Sisa Waktu</th>
+                  <th className="px-5 py-3">Status</th>
+                  <th className="px-5 py-3">Customer / PRO</th>
+                  <th className="px-5 py-3">Material Description</th>
+                  <th className="px-5 py-3 text-right">Qty Prod</th>
+                  <th className="px-5 py-3 text-right">Actual</th>
+                  <th className="px-5 py-3 text-right">Remain</th>
+                  <th className="px-5 py-3 text-right">Est. Sisa Waktu</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-gray-100">
+              <tbody className="divide-y divide-gray-100 text-gray-700">
                 {filteredMaterials.length > 0 ? filteredMaterials.map((mat, i) => {
                   let actual = 0;
                   let cumulativeActual = 0;
@@ -260,43 +286,49 @@ export default function DetailArea() {
                   } else {
                     actual = mat.dailyActuals[selectedDay] || 0;
                     const selectedIdx = daysKeys.indexOf(selectedDay);
-                    for (let i = 0; i <= selectedIdx; i++) {
-                      cumulativeActual += (mat.dailyActuals[daysKeys[i]] || 0);
+                    for (let d = 0; d <= selectedIdx; d++) {
+                      cumulativeActual += (mat.dailyActuals[daysKeys[d]] || 0);
                     }
                   }
 
                   const remaining = mat.qtyProduksi - cumulativeActual;
+                  const rawStatusText = mat.rawStatus || mat.status || 'UNPLAN';
 
                   return (
-                    <tr key={i} className="hover:bg-gray-50 transition-colors">
-                      <td className="px-6 py-4">
-                        <span className={`px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider ${isShowingPlanned ? 'bg-blue-50 text-blue-600' : 'bg-red-50 text-red-600'
-                          }`}>
-                          {mat.status || 'UNPLANNED'}
+                    <tr key={i} className="hover:bg-blue-50/40 transition-colors">
+                      <td className="px-5 py-2.5">
+                        <span 
+                          className={`px-2.5 py-1 rounded-md text-[10px] font-black uppercase tracking-wider inline-flex items-center ${
+                            isShowingPlanned 
+                              ? 'bg-blue-50 text-blue-700 border border-blue-200/80' 
+                              : 'bg-red-50 text-red-700 border border-red-200/80'
+                          }`}
+                        >
+                          {rawStatusText}
                         </span>
                       </td>
-                      <td className="px-6 py-4">
-                        <div className="font-bold text-gray-900 mb-1">{mat.customer || '-'}</div>
+                      <td className="px-5 py-2.5">
+                        <div className="font-bold text-gray-900 mb-0.5">{mat.customer || '-'}</div>
                         {(!mat.proNumber || String(mat.proNumber).startsWith('DRAFT-ROW')) ? (
-                          <div className="flex items-center gap-1 text-[10px] text-gray-400 bg-gray-50 px-2 py-0.5 rounded w-fit">
+                          <div className="flex items-center gap-1 text-[10px] text-gray-400 bg-gray-100/70 px-1.5 py-0.5 rounded w-fit">
                             <span className="font-bold">PRO</span> -
                           </div>
                         ) : (
-                          <div className="flex items-center gap-1 text-[10px] text-gray-500 bg-gray-100 px-2 py-0.5 rounded w-fit">
-                            <span className="font-bold">PRO</span> {mat.proNumber}
+                          <div className="flex items-center gap-1 text-[10px] text-gray-600 bg-gray-100 px-1.5 py-0.5 rounded w-fit font-mono font-medium">
+                            <span className="font-bold text-gray-400">PRO</span> {mat.proNumber}
                           </div>
                         )}
                       </td>
-                      <td className="px-6 py-4 font-bold text-gray-700">{mat.description || '-'}</td>
-                      <td className="px-6 py-4 text-right font-bold text-gray-900">{mat.qtyProduksi.toLocaleString('id-ID', { maximumFractionDigits: 0 })}</td>
-                      <td className="px-6 py-4 text-right font-bold text-blue-600">{actual.toLocaleString('id-ID', { maximumFractionDigits: 0 })}</td>
-                      <td className="px-6 py-4 text-right font-bold text-gray-900">{remaining > 0 ? remaining.toLocaleString('id-ID', { maximumFractionDigits: 0 }) : '0'}</td>
-                      <td className="px-6 py-4 text-right font-bold text-gray-900">{mat.estimasiSisaWaktu > 0 ? formatDurasi(mat.estimasiSisaWaktu) : '0 Jam'}</td>
+                      <td className="px-5 py-2.5 font-semibold text-gray-800">{mat.description || '-'}</td>
+                      <td className="px-5 py-2.5 text-right font-bold text-gray-900">{mat.qtyProduksi.toLocaleString('id-ID', { maximumFractionDigits: 0 })}</td>
+                      <td className="px-5 py-2.5 text-right font-black text-blue-600">{actual.toLocaleString('id-ID', { maximumFractionDigits: 0 })}</td>
+                      <td className="px-5 py-2.5 text-right font-bold text-gray-900">{remaining > 0 ? remaining.toLocaleString('id-ID', { maximumFractionDigits: 0 }) : '0'}</td>
+                      <td className="px-5 py-2.5 text-right font-bold text-gray-900">{mat.estimasiSisaWaktu > 0 ? formatDurasi(mat.estimasiSisaWaktu) : '0 Jam'}</td>
                     </tr>
                   );
                 }) : (
                   <tr>
-                    <td colSpan={7} className="px-6 py-10 text-center text-gray-400 font-medium">
+                    <td colSpan={7} className="px-6 py-12 text-center text-gray-400 font-medium">
                       Tidak ada material yang ditemukan.
                     </td>
                   </tr>
@@ -310,52 +342,49 @@ export default function DetailArea() {
   };
 
   return (
-    <div className="flex flex-col h-full bg-[#F5F6F8]">
+    <div className="flex flex-col h-full bg-[#F5F6F8] overflow-hidden select-none">
       {/* Top Navigation */}
-      <header className="bg-white h-20 px-8 flex items-center justify-between border-b border-gray-200 shadow-sm relative">
-        <div className="flex items-center space-x-4">
-          <div className="w-11 h-11 rounded-xl bg-gradient-to-br from-blue-600 to-indigo-700 flex items-center justify-center text-white shadow-md shadow-blue-500/20 flex-shrink-0">
-            <Factory className="w-6 h-6" />
+      <header className="bg-white h-16 px-6 flex items-center justify-between border-b border-gray-200 shadow-sm relative shrink-0">
+        <div className="flex items-center space-x-3">
+          <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-blue-600 to-indigo-700 flex items-center justify-center text-white shadow-md shadow-blue-500/20 flex-shrink-0">
+            <Factory className="w-5 h-5" />
           </div>
           <div className="flex flex-col justify-center">
-            <h1 className="text-xl font-extrabold text-gray-900 leading-none">Detail Area</h1>
-            <p className="text-[11px] text-gray-500 font-bold tracking-[0.15em] mt-1 uppercase">Production Progress Dashboard</p>
+            <h1 className="text-lg font-extrabold text-gray-900 leading-none">Detail Area</h1>
+            <p className="text-[10px] text-gray-500 font-bold tracking-[0.15em] mt-1 uppercase">Production Progress Dashboard</p>
           </div>
         </div>
 
-        {/* Live indicator removed based on user request */}
-
-        <div className="flex items-center space-x-3">
+        <div className="flex items-center space-x-2">
           <select
-            className="px-4 py-2 border border-gray-200 rounded-lg text-sm font-semibold text-gray-700 bg-white hover:bg-gray-50 shadow-sm outline-none appearance-none pr-8 bg-[url('data:image/svg+xml;charset=US-ASCII,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%22292.4%22%20height%3D%22292.4%22%3E%3Cpath%20fill%3D%22%236B7280%22%20d%3D%22M287%2069.4a17.6%2017.6%200%200%200-13-5.4H18.4c-5%200-9.3%201.8-12.9%205.4A17.6%2017.6%200%200%200%200%2082.2c0%205%201.8%209.3%205.4%2012.9l128%20127.9c3.6%203.6%207.8%205.4%2012.8%205.4s9.2-1.8%2012.8-5.4L287%2095c3.5-3.5%205.4-7.8%205.4-12.8%200-5-1.9-9.2-5.5-12.8z%22%2F%3E%3C%2Fsvg%3E')] bg-[length:10px_10px] bg-no-repeat bg-[right_12px_center]"
+            className="px-3 py-1.5 border border-gray-200 rounded-lg text-xs font-semibold text-gray-700 bg-white hover:bg-gray-50 shadow-xs outline-none appearance-none pr-7 bg-[url('data:image/svg+xml;charset=US-ASCII,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%22292.4%22%20height%3D%22292.4%22%3E%3Cpath%20fill%3D%22%236B7280%22%20d%3D%22M287%2069.4a17.6%2017.6%200%200%200-13-5.4H18.4c-5%200-9.3%201.8-12.9%205.4A17.6%2017.6%200%200%200%200%2082.2c0%205%201.8%209.3%205.4%2012.9l128%20127.9c3.6%203.6%207.8%205.4%2012.8%205.4s9.2-1.8%2012.8-5.4L287%2095c3.5-3.5%205.4-7.8%205.4-12.8%200-5-1.9-9.2-5.5-12.8z%22%2F%3E%3C%2Fsvg%3E')] bg-[length:9px_9px] bg-no-repeat bg-[right_10px_center]"
             value={selectedDay}
             onChange={(e) => setSelectedDay(e.target.value)}
           >
             <option value="Semua Hari">Semua Hari</option>
             {daysKeys.map(d => <option key={d} value={d}>{d}</option>)}
           </select>
-          <Link to="/" className="flex items-center space-x-2 px-5 py-2 border border-gray-200 rounded-lg text-sm font-semibold text-gray-700 bg-white hover:bg-gray-50 shadow-sm transition-colors">
-            <BarChart2 className="w-4 h-4" />
+          <Link to="/" className="flex items-center space-x-1.5 px-3.5 py-1.5 border border-gray-200 rounded-lg text-xs font-semibold text-gray-700 bg-white hover:bg-gray-50 shadow-xs transition-colors">
+            <BarChart2 className="w-3.5 h-3.5" />
             <span>Chart Dashboard</span>
           </Link>
-          <Link to="/processing-time" className="flex items-center space-x-2 px-5 py-2 border border-gray-200 rounded-lg text-sm font-semibold text-gray-700 bg-white hover:bg-gray-50 shadow-sm transition-colors">
-            <Clock className="w-4 h-4" />
+          <Link to="/processing-time" className="flex items-center space-x-1.5 px-3.5 py-1.5 border border-gray-200 rounded-lg text-xs font-semibold text-gray-700 bg-white hover:bg-gray-50 shadow-xs transition-colors">
+            <Clock className="w-3.5 h-3.5" />
             <span>Processing Time</span>
           </Link>
-          <Link to="/production-monitoring" className="flex items-center space-x-2 px-5 py-2 border border-gray-200 rounded-lg text-sm font-semibold text-gray-700 bg-white hover:bg-gray-50 shadow-sm transition-colors">
-            <Activity className="w-4 h-4" />
+          <Link to="/production-monitoring" className="flex items-center space-x-1.5 px-3.5 py-1.5 border border-gray-200 rounded-lg text-xs font-semibold text-gray-700 bg-white hover:bg-gray-50 shadow-xs transition-colors">
+            <Activity className="w-3.5 h-3.5" />
             <span>Monitoring</span>
           </Link>
-          <Link to="/settings" className="flex items-center space-x-2 px-5 py-2 border border-gray-200 rounded-lg text-sm font-semibold text-gray-700 bg-white hover:bg-gray-50 shadow-sm transition-colors">
-            <Settings2 className="w-4 h-4" />
+          <Link to="/settings" className="flex items-center space-x-1.5 px-3.5 py-1.5 border border-gray-200 rounded-lg text-xs font-semibold text-gray-700 bg-white hover:bg-gray-50 shadow-xs transition-colors">
+            <Settings2 className="w-3.5 h-3.5" />
             <span>Pengaturan</span>
           </Link>
         </div>
       </header>
 
       {/* Main Content */}
-      <div className="p-8 flex-1 flex flex-col items-center overflow-y-auto">
-
+      <div className="p-8 flex-1 flex flex-col items-center overflow-y-auto min-h-0">
         <div className="w-full max-w-2xl">
           {needsPermission && (
             <div className="mb-4 bg-yellow-50 border border-yellow-200 rounded-lg p-3 flex items-center justify-between shadow-sm">
@@ -379,7 +408,7 @@ export default function DetailArea() {
 
           <div className="flex justify-center mb-6">
             <div className="px-6 py-2 bg-white border border-gray-200 rounded-full text-sm font-medium text-gray-600 shadow-sm">
-              Menampilkan: <span className="text-blue-600">{displayFileName}</span>
+              Menampilkan: <span className="text-blue-600 font-bold">{displayFileName}</span>
             </div>
           </div>
 

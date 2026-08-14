@@ -228,6 +228,7 @@ self.onmessage = (e) => {
           machine_name: sheetName,
           pro_number: proNumber,
           status,
+          raw_status: rawStatus || (statusIdx !== -1 ? String(row[statusIdx] || '').trim() : status),
           target_planning: targetPlanningIdx !== -1 ? (row[targetPlanningIdx] ?? null) : null,
           customer,
           plan_so: planSoString,

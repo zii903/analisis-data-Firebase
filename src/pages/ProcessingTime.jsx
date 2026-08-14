@@ -12,8 +12,8 @@ export default function ProcessingTime() {
   const [modalSearchTerm, setModalSearchTerm] = useState('');
   
   const { selectedFile } = useFilter();
-  const { isSyncing, needsPermission, startWatching } = useFolderSyncContext();
-  const { machineStats: machines, loading } = useMachineData();
+  const { isSyncing, needsPermission, startWatching, lastSyncTime } = useFolderSyncContext();
+  const { machineStats: machines } = useMachineData();
 
   const displayFileName = selectedFile ? selectedFile.split(/[\\/]/).pop() : 'Belum ada file';
 
@@ -185,57 +185,64 @@ export default function ProcessingTime() {
   };
 
   return (
-    <div className="flex flex-col h-full bg-[#F5F6F8]">
+    <div className="flex flex-col h-full bg-[#F5F6F8] overflow-hidden select-none">
       {/* Top Navigation */}
-      <header className="bg-white h-20 px-8 flex items-center justify-between border-b border-gray-200 shadow-sm relative">
-        <div className="flex items-center space-x-4">
-          <div className="w-11 h-11 rounded-xl bg-gradient-to-br from-blue-600 to-indigo-700 flex items-center justify-center text-white shadow-md shadow-blue-500/20 flex-shrink-0">
-            <Factory className="w-6 h-6" />
+      <header className="bg-white h-16 px-6 flex items-center justify-between border-b border-gray-200 shadow-sm relative shrink-0">
+        <div className="flex items-center space-x-3">
+          <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-blue-600 to-indigo-700 flex items-center justify-center text-white shadow-md shadow-blue-500/20 flex-shrink-0">
+            <Factory className="w-5 h-5" />
           </div>
           <div className="flex flex-col justify-center">
-            <h1 className="text-xl font-extrabold text-gray-900 leading-none">Processing Time</h1>
-            <p className="text-[11px] text-gray-500 font-bold tracking-[0.15em] mt-1 uppercase">Processing Time Based on Machine Category</p>
+            <h1 className="text-lg font-extrabold text-gray-900 leading-none">Processing Time</h1>
+            <p className="text-[10px] text-gray-500 font-bold tracking-[0.15em] mt-1 uppercase">Machine Category Analysis</p>
+          </div>
+
+          {/* Live & Last Sync Status Badge safely placed on the left next to title */}
+          <div className="hidden sm:flex items-center space-x-2 pl-3 border-l border-gray-200 ml-1">
+            <div className="flex items-center space-x-1.5 px-3 py-1 border rounded-full text-xs font-bold shadow-xs bg-white"
+                 style={{ borderColor: isSyncing ? '#FDBA74' : '#BBF7D0', color: isSyncing ? '#F97316' : '#22C55E' }}>
+              <Circle className={`w-2 h-2 ${isSyncing ? 'animate-pulse' : ''}`} style={{ fill: isSyncing ? '#F97316' : '#22C55E' }} />
+              <span>{isSyncing ? 'Sinkronisasi...' : 'Live'}</span>
+            </div>
+            {lastSyncTime && (
+              <div className="px-2.5 py-1 border border-gray-200 rounded-full text-[11px] font-semibold text-gray-500 bg-white shadow-xs">
+                Terakhir: {lastSyncTime.toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' })}
+              </div>
+            )}
           </div>
         </div>
 
-        {/* Centered Live / Sync Indicator */}
-        <div className="absolute left-1/2 transform -translate-x-1/2 flex items-center space-x-2 px-4 py-1.5 border rounded-full text-sm font-bold shadow-sm transition-colors duration-300 bg-white"
-          style={{ borderColor: isSyncing ? '#FDBA74' : '#BBF7D0', color: isSyncing ? '#F97316' : '#22C55E' }}>
-          <Circle className={`w-3 h-3 ${isSyncing ? 'animate-pulse' : ''}`} style={{ fill: isSyncing ? '#F97316' : '#22C55E' }} />
-          <span>{isSyncing ? 'Sinkronisasi...' : 'Live'}</span>
-        </div>
-
-        <div className="flex items-center space-x-3">
-          <Link to="/detail-area" className="flex items-center space-x-2 px-5 py-2 border border-gray-200 rounded-lg text-sm font-semibold text-gray-700 bg-white hover:bg-gray-50 shadow-sm transition-colors">
-            <FileText className="w-4 h-4" />
-            <span>Detail Area</span>
-          </Link>
-          <Link to="/" className="flex items-center space-x-2 px-5 py-2 border border-gray-200 rounded-lg text-sm font-semibold text-gray-700 bg-white hover:bg-gray-50 shadow-sm transition-colors">
-            <BarChart2 className="w-4 h-4" />
+        <div className="flex items-center space-x-2">
+          <Link to="/" className="flex items-center space-x-1.5 px-3.5 py-1.5 border border-gray-200 rounded-lg text-xs font-semibold text-gray-700 bg-white hover:bg-gray-50 shadow-xs transition-colors">
+            <BarChart2 className="w-3.5 h-3.5" />
             <span>Chart Dashboard</span>
           </Link>
-          <Link to="/production-monitoring" className="flex items-center space-x-2 px-5 py-2 border border-gray-200 rounded-lg text-sm font-semibold text-gray-700 bg-white hover:bg-gray-50 shadow-sm transition-colors">
-            <Activity className="w-4 h-4" />
+          <Link to="/detail-area" className="flex items-center space-x-1.5 px-3.5 py-1.5 border border-gray-200 rounded-lg text-xs font-semibold text-gray-700 bg-white hover:bg-gray-50 shadow-xs transition-colors">
+            <FileText className="w-3.5 h-3.5" />
+            <span>Detail Area</span>
+          </Link>
+          <Link to="/production-monitoring" className="flex items-center space-x-1.5 px-3.5 py-1.5 border border-gray-200 rounded-lg text-xs font-semibold text-gray-700 bg-white hover:bg-gray-50 shadow-xs transition-colors">
+            <Activity className="w-3.5 h-3.5" />
             <span>Monitoring</span>
           </Link>
-          <Link to="/settings" className="flex items-center space-x-2 px-5 py-2 border border-gray-200 rounded-lg text-sm font-semibold text-gray-700 bg-white hover:bg-gray-50 shadow-sm transition-colors">
-            <Settings2 className="w-4 h-4" />
+          <Link to="/settings" className="flex items-center space-x-1.5 px-3.5 py-1.5 border border-gray-200 rounded-lg text-xs font-semibold text-gray-700 bg-white hover:bg-gray-50 shadow-xs transition-colors">
+            <Settings2 className="w-3.5 h-3.5" />
             <span>Pengaturan</span>
           </Link>
         </div>
       </header>
 
       {/* Main Content */}
-      <div className="p-8 flex-1 flex flex-col items-center overflow-y-auto">
+      <div className="p-6 sm:p-8 flex-1 flex flex-col items-center overflow-y-auto min-h-0">
         <div className="w-full max-w-2xl">
           <div className="flex justify-center mb-6">
             <div className="px-6 py-2 bg-white border border-gray-200 rounded-full text-sm font-medium text-gray-600 shadow-sm">
-              Menampilkan: <span className="text-blue-600">{displayFileName}</span>
+              Menampilkan: <span className="text-blue-600 font-bold">{displayFileName}</span>
             </div>
           </div>
 
           {needsPermission && (
-            <div className="mb-8 bg-yellow-50 border border-yellow-200 rounded-lg p-3 flex items-center justify-between shadow-sm">
+            <div className="mb-8 bg-yellow-50 border border-yellow-200 rounded-xl p-3.5 flex items-center justify-between shadow-sm">
               <div className="flex items-center space-x-3">
                 <div className="w-8 h-8 bg-yellow-100 rounded-full flex items-center justify-center text-yellow-600">
                   <span className="font-bold text-sm">!</span>
@@ -267,7 +274,7 @@ export default function ProcessingTime() {
             />
           </div>
 
-          <div className="space-y-6">
+          <div className="space-y-6 pb-6">
             {/* Grand Total Estimasi Sisa Waktu Banner */}
             {grandTotalEstimasi > 0 && (
               <div className="bg-white border border-gray-200 rounded-2xl p-6 shadow-sm">
@@ -294,7 +301,11 @@ export default function ProcessingTime() {
             )}
 
             {filteredMachines.map((machine, idx) => (
-              <div key={idx} onClick={() => { setSelectedMachine(machine); setModalSearchTerm(''); }} className="bg-white rounded-2xl p-6 border border-gray-200 shadow-sm transition-shadow hover:shadow-md cursor-pointer">
+              <div 
+                key={idx} 
+                onClick={() => { setSelectedMachine(machine); setModalSearchTerm(''); }} 
+                className="bg-white rounded-2xl p-6 border border-gray-200 shadow-sm transition-shadow hover:shadow-md cursor-pointer"
+              >
                 <div className="flex items-center justify-between mb-5">
                   <h2 className="text-xl font-bold text-gray-900">{machine.name}</h2>
                   <div className="flex space-x-2">
