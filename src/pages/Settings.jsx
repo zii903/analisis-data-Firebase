@@ -1,21 +1,25 @@
 import { useState, useMemo, useEffect } from 'react';
-import { set, clear } from 'idb-keyval';
-import { Settings2, FolderOpen, Check, Play, Square, AlertCircle, Loader, Circle, X, BarChart2, FileText, Clock, Activity } from 'lucide-react';
+import { get, set, clear } from 'idb-keyval';
+import { Settings2, FolderOpen, Check, Play, Square, AlertCircle, Loader, Circle, X, BarChart2, FileText, Clock, Activity, Database, Cloud, CheckCircle2, UploadCloud } from 'lucide-react';
 import { useFilter } from '../contexts/FilterContext';
 import { useFolderSyncContext } from '../contexts/FolderSyncContext';
+import { syncExcelToFirebase } from '../services/firebaseSyncService';
+import { firebaseConfig } from '../services/firebaseConfig';
 import { Link } from 'react-router-dom';
 
 export default function Settings() {
   const { selectedFile, setSelectedFile } = useFilter();
   const { 
     isWatching, isSyncing, statusText, folderName, needsPermission, 
-    availableFiles: contextAvailableFiles, syncSpecificFile, startWatching, stopWatching, lastSyncTime
+    availableFiles: contextAvailableFiles, syncSpecificFile, startWatching, stopWatching, lastSyncTime,
+    firebaseSyncMetrics
   } = useFolderSyncContext();
 
   const [selectedYear, setSelectedYear] = useState('');
   const [selectedMonth, setSelectedMonth] = useState('');
   const [selectedPeriod, setSelectedPeriod] = useState('');
   const [isSaving, setIsSaving] = useState(false);
+  const [isFirebaseSyncing, setIsFirebaseSyncing] = useState(false);
 
   const fileStructure = useMemo(() => {
     return contextAvailableFiles.map(fileObj => {
@@ -81,6 +85,35 @@ export default function Settings() {
       }
     } else {
       alert('Pilih file terlebih dahulu!');
+    }
+  };
+
+  const handleManualFirebaseSync = async () => {
+    if (!selectedFile) {
+      alert('Pilih file Excel utama terlebih dahulu!');
+      return;
+    }
+    try {
+      setIsFirebaseSyncing(true);
+      const safeId = selectedFile.replace(/[\/\\]/g, '_');
+      const cachedRows = await get(`file_data_${safeId}`);
+      
+      if (!cachedRows || cachedRows.length === 0) {
+        await syncSpecificFile(selectedFile);
+        alert('File berhasil diurai dan dikirim ke Firebase!');
+      } else {
+        const result = await syncExcelToFirebase(selectedFile, cachedRows, { forceUpdateMeta: true });
+        if (result.success) {
+          alert(`✅ Berhasil Sinkron ke Firebase Realtime Database!\n\n• Total Baris: ${result.total}\n• Data Baru: ${result.added}\n• Data Diperbarui: ${result.updated}\n• Durasi: ${result.duration}ms`);
+        } else {
+          alert(`⚠️ Gagal Mengirim ke Firebase:\n${result.error}\n\nTips: Periksa tab 'Rules' di Firebase Console Anda dan pastikan .read dan .write bernilai true.`);
+        }
+      }
+    } catch (err) {
+      console.error("Manual Firebase sync failed:", err);
+      alert(`Error saat sinkronisasi: ${err.message}`);
+    } finally {
+      setIsFirebaseSyncing(false);
     }
   };
 
@@ -156,12 +189,11 @@ export default function Settings() {
           </Link>
         </div>
       </header>
-
       <div className="p-4 sm:p-6 flex-1 flex justify-center overflow-y-auto min-h-0">
-        <div className="w-full max-w-5xl">
+        <div className="w-full max-w-4xl">
           <div className="mb-4">
-            <h2 className="text-2xl font-extrabold text-gray-900 mb-1 tracking-tight">Pengaturan Sinkronisasi</h2>
-            <p className="text-gray-500 text-sm">
+            <h2 className="text-xl font-bold text-gray-900 leading-tight">Pengaturan Sinkronisasi</h2>
+            <p className="text-gray-500 text-xs sm:text-sm mt-0.5">
               Konfigurasi direktori sumber data dan pilih file Excel yang ingin ditampilkan di semua dashboard.
             </p>
           </div>
@@ -169,35 +201,35 @@ export default function Settings() {
           <div className="space-y-4">
             {/* Step 1 */}
             <div className="bg-white rounded-2xl shadow-sm border border-gray-200 overflow-hidden">
-              <div className="p-5">
-                <div className="flex items-start space-x-4 mb-4">
-                  <div className="w-7 h-7 rounded-full bg-blue-500 text-white flex items-center justify-center font-bold flex-shrink-0 mt-0.5 text-sm">
+              <div className="p-4 sm:p-5">
+                <div className="flex items-start space-x-3.5 mb-3.5">
+                  <div className="w-7 h-7 rounded-full bg-blue-600 text-white flex items-center justify-center font-bold flex-shrink-0 mt-0.5 text-xs sm:text-sm">
                     1
                   </div>
                   <div>
-                    <h3 className="text-base font-bold text-gray-900">Pilih Folder Sumber Data</h3>
+                    <h3 className="text-sm sm:text-base font-bold text-gray-900">Pilih Folder Sumber Data</h3>
                     <p className="text-xs text-gray-500 mt-0.5">Hubungkan browser ke direktori lokal yang berisi file Excel produksi</p>
                   </div>
                 </div>
 
-                <div className="flex flex-col sm:flex-row gap-3 ml-11">
-                  <div className="flex-1 px-4 py-3 border border-gray-200 rounded-lg text-sm text-gray-900 bg-gray-50 flex items-center">
+                <div className="flex flex-col sm:flex-row gap-2.5 ml-10">
+                  <div className="flex-1 px-3.5 py-2.5 border border-gray-200 rounded-xl text-xs sm:text-sm text-gray-900 bg-gray-50 flex items-center truncate">
                     {folderName ? `Folder: ${folderName}` : 'Pilih folder untuk memulai...'}
                   </div>
                   
-                  <div className="flex space-x-3">
+                  <div className="flex space-x-2 shrink-0">
                     <button 
                       onClick={() => startWatching(false, true)}
-                      className="flex items-center justify-center space-x-2 px-6 py-3 border border-gray-200 rounded-lg text-sm font-semibold text-gray-700 hover:bg-gray-50 bg-white transition-colors"
+                      className="flex items-center justify-center space-x-1.5 px-4 py-2.5 border border-gray-200 rounded-xl text-xs sm:text-sm font-semibold text-gray-700 hover:bg-gray-50 bg-white transition-colors shadow-xs"
                     >
-                      <FolderOpen className="w-4 h-4" />
+                      <FolderOpen className="w-4 h-4 text-gray-500" />
                       <span>Browse</span>
                     </button>
                     
                     {isWatching ? (
                       <button 
                         onClick={stopWatching}
-                        className="flex items-center justify-center space-x-2 px-6 py-3 bg-red-500 rounded-lg text-sm font-semibold text-white hover:bg-red-600 transition-colors shadow-sm"
+                        className="flex items-center justify-center space-x-1.5 px-4 py-2.5 bg-red-600 rounded-xl text-xs sm:text-sm font-semibold text-white hover:bg-red-700 transition-colors shadow-xs"
                       >
                         <Square className="w-4 h-4" />
                         <span>Stop Pemantauan</span>
@@ -206,7 +238,7 @@ export default function Settings() {
                       <button 
                         onClick={() => startWatching(true)}
                         disabled={!folderName && !needsPermission}
-                        className={`flex items-center justify-center space-x-2 px-6 py-3 rounded-lg text-sm font-semibold text-white transition-colors shadow-sm ${folderName || needsPermission ? 'bg-blue-500 hover:bg-blue-600' : 'bg-gray-300 cursor-not-allowed'}`}
+                        className={`flex items-center justify-center space-x-1.5 px-4 py-2.5 rounded-xl text-xs sm:text-sm font-semibold text-white transition-colors shadow-xs ${folderName || needsPermission ? 'bg-blue-600 hover:bg-blue-700' : 'bg-gray-300 cursor-not-allowed'}`}
                       >
                         <Play className="w-4 h-4" />
                         <span>{needsPermission ? 'Izinkan Akses & Mulai' : 'Mulai Memantau'}</span>
@@ -215,21 +247,21 @@ export default function Settings() {
                   </div>
                 </div>
                 
-                <div className="ml-11 mt-4 flex items-center justify-between">
+                <div className="ml-10 mt-3 flex items-center justify-between">
                   <p className="text-[11px] text-gray-400">
                     <span className="font-bold">Catatan:</span> Pastikan folder berisi file .xlsx. Proses berjalan otomatis di latar belakang.
                   </p>
-                  <div className="flex items-center space-x-2 text-xs font-medium">
+                  <div className="flex items-center space-x-1.5 text-xs font-medium">
                     <div className={`w-2 h-2 rounded-full ${isWatching ? 'bg-green-500 animate-pulse' : 'bg-gray-400'}`}></div>
-                    <span className={isWatching ? 'text-green-600' : 'text-gray-500'}>{statusText}</span>
+                    <span className={isWatching ? 'text-green-600 font-semibold' : 'text-gray-500'}>{statusText}</span>
                   </div>
                 </div>
                 
                 {needsPermission && (
-                  <div className="ml-11 mt-3 bg-yellow-50 border border-yellow-200 rounded-lg p-2.5 flex items-start space-x-2 text-xs text-yellow-800">
-                    <AlertCircle className="w-5 h-5 flex-shrink-0 mt-0.5 text-yellow-600" />
+                  <div className="ml-10 mt-3 bg-yellow-50 border border-yellow-200 rounded-xl p-2.5 flex items-start space-x-2 text-xs text-yellow-800">
+                    <AlertCircle className="w-4 h-4 flex-shrink-0 mt-0.5 text-yellow-600" />
                     <div>
-                      <strong>Izin diperlukan:</strong> Browser memerlukan izin Anda untuk memantau folder <strong>{folderName}</strong>. Klik tombol "Izinkan Akses & Mulai" di atas.
+                      <strong>Izin diperlukan:</strong> Browser memerlukan izin untuk memantau folder <strong>{folderName}</strong>. Klik tombol "Izinkan Akses & Mulai" di atas.
                     </div>
                   </div>
                 )}
@@ -238,49 +270,49 @@ export default function Settings() {
 
             {/* Step 2 */}
             <div className="bg-white rounded-2xl shadow-sm border border-gray-200 overflow-hidden">
-              <div className="p-5">
-                <div className="flex items-start space-x-4 mb-5">
-                  <div className="w-7 h-7 rounded-full bg-blue-500 text-white flex items-center justify-center font-bold flex-shrink-0 mt-0.5 text-sm">
+              <div className="p-4 sm:p-5">
+                <div className="flex items-start space-x-3.5 mb-4">
+                  <div className="w-7 h-7 rounded-full bg-blue-600 text-white flex items-center justify-center font-bold flex-shrink-0 mt-0.5 text-xs sm:text-sm">
                     2
                   </div>
                   <div>
-                    <h3 className="text-base font-bold text-gray-900">Pilih File yang ingin ditampilkan</h3>
-                    <p className="text-xs text-gray-500 mt-0.5">Tentukan data mana yang akan tampil di Progress Dashboard, Detail Area, dan Processing Time</p>
+                    <h3 className="text-sm sm:text-base font-bold text-gray-900">Pilih File yang ingin ditampilkan</h3>
+                    <p className="text-xs text-gray-500 mt-0.5">Tentukan data mana yang akan tampil di Dashboard, Detail Area, dan Processing Time</p>
                   </div>
                 </div>
 
-                <div className="ml-11">
-                  <div className="mb-4">
+                <div className="ml-10">
+                  <div className="mb-3.5">
                     {/* Breadcrumbs for choices */}
                     {(selectedYear || selectedMonth || selectedPeriod) && (
-                      <div className="flex flex-wrap gap-2 mb-4">
+                      <div className="flex flex-wrap gap-2 mb-3">
                         {selectedYear && (
-                          <div onClick={resetToYear} className="cursor-pointer bg-blue-50 border border-blue-100 text-blue-700 px-3 py-1.5 rounded-full text-xs font-bold hover:bg-red-50 hover:text-red-600 hover:border-red-200 transition-colors flex items-center group">
-                            Tahun: {selectedYear} <X className="w-3 h-3 ml-1.5 text-blue-400 group-hover:text-red-500" />
+                          <div onClick={resetToYear} className="cursor-pointer bg-blue-50 border border-blue-100 text-blue-700 px-3 py-1 rounded-full text-xs font-bold hover:bg-red-50 hover:text-red-600 hover:border-red-200 transition-colors flex items-center group">
+                            Tahun: {selectedYear} <X className="w-3 h-3 ml-1 text-blue-400 group-hover:text-red-500" />
                           </div>
                         )}
                         {selectedMonth && (
-                          <div onClick={resetToMonth} className="cursor-pointer bg-blue-50 border border-blue-100 text-blue-700 px-3 py-1.5 rounded-full text-xs font-bold hover:bg-red-50 hover:text-red-600 hover:border-red-200 transition-colors flex items-center group">
-                            Bulan: {selectedMonth.replace(/^\d+\.\s*/, '')} <X className="w-3 h-3 ml-1.5 text-blue-400 group-hover:text-red-500" />
+                          <div onClick={resetToMonth} className="cursor-pointer bg-blue-50 border border-blue-100 text-blue-700 px-3 py-1 rounded-full text-xs font-bold hover:bg-red-50 hover:text-red-600 hover:border-red-200 transition-colors flex items-center group">
+                            Bulan: {selectedMonth.replace(/^\d+\.\s*/, '')} <X className="w-3 h-3 ml-1 text-blue-400 group-hover:text-red-500" />
                           </div>
                         )}
                         {selectedPeriod && (
-                          <div onClick={resetToPeriod} className="cursor-pointer bg-blue-50 border border-blue-100 text-blue-700 px-3 py-1.5 rounded-full text-xs font-bold hover:bg-red-50 hover:text-red-600 hover:border-red-200 transition-colors flex items-center group">
-                            Periode: {selectedPeriod} <X className="w-3 h-3 ml-1.5 text-blue-400 group-hover:text-red-500" />
+                          <div onClick={resetToPeriod} className="cursor-pointer bg-blue-50 border border-blue-100 text-blue-700 px-3 py-1 rounded-full text-xs font-bold hover:bg-red-50 hover:text-red-600 hover:border-red-200 transition-colors flex items-center group">
+                            Periode: {selectedPeriod} <X className="w-3 h-3 ml-1 text-blue-400 group-hover:text-red-500" />
                           </div>
                         )}
                       </div>
                     )}
 
-                    <div className="max-w-sm">
+                    <div className="max-w-md">
                       {activeStep === 'year' && (
                         <div>
-                          <div className="flex items-center space-x-2 mb-2">
-                            <div className="w-2 h-2 rounded-full bg-blue-400"></div>
+                          <div className="flex items-center space-x-1.5 mb-1.5">
+                            <div className="w-1.5 h-1.5 rounded-full bg-blue-500"></div>
                             <label className="text-xs font-bold text-gray-400 uppercase tracking-wider">TAHUN</label>
                           </div>
                           <select 
-                            className="w-full px-4 py-3.5 border border-gray-200 rounded-xl text-sm font-bold text-gray-700 bg-white focus:outline-none focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 hover:border-blue-300 shadow-sm transition-all duration-200 appearance-none bg-[url('data:image/svg+xml;charset=US-ASCII,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%22292.4%22%20height%3D%22292.4%22%3E%3Cpath%20fill%3D%22%239CA3AF%22%20d%3D%22M287%2069.4a17.6%2017.6%200%200%200-13-5.4H18.4c-5%200-9.3%201.8-12.9%205.4A17.6%2017.6%200%200%200%200%2082.2c0%205%201.8%209.3%205.4%2012.9l128%20127.9c3.6%203.6%207.8%205.4%2012.8%205.4s9.2-1.8%2012.8-5.4L287%2095c3.5-3.5%205.4-7.8%205.4-12.8%200-5-1.9-9.2-5.5-12.8z%22%2F%3E%3C%2Fsvg%3E')] bg-[length:12px_12px] bg-no-repeat bg-[right_16px_center]"
+                            className="w-full px-3.5 py-2.5 border border-gray-200 rounded-xl text-xs sm:text-sm font-bold text-gray-700 bg-white focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/10 hover:border-blue-300 shadow-xs appearance-none bg-[url('data:image/svg+xml;charset=US-ASCII,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%22292.4%22%20height%3D%22292.4%22%3E%3Cpath%20fill%3D%22%239CA3AF%22%20d%3D%22M287%2069.4a17.6%2017.6%200%200%200-13-5.4H18.4c-5%200-9.3%201.8-12.9%205.4A17.6%2017.6%200%200%200%200%2082.2c0%205%201.8%209.3%205.4%2012.9l128%20127.9c3.6%203.6%207.8%205.4%2012.8%205.4s9.2-1.8%2012.8-5.4L287%2095c3.5-3.5%205.4-7.8%205.4-12.8%200-5-1.9-9.2-5.5-12.8z%22%2F%3E%3C%2Fsvg%3E')] bg-[length:10px_10px] bg-no-repeat bg-[right_14px_center]"
                             value={selectedYear}
                             onChange={(e) => setSelectedYear(e.target.value)}
                           >
@@ -292,12 +324,12 @@ export default function Settings() {
                       
                       {activeStep === 'month' && (
                         <div>
-                          <div className="flex items-center space-x-2 mb-2">
-                            <div className="w-2 h-2 rounded-full bg-blue-400"></div>
+                          <div className="flex items-center space-x-1.5 mb-1.5">
+                            <div className="w-1.5 h-1.5 rounded-full bg-blue-500"></div>
                             <label className="text-xs font-bold text-gray-400 uppercase tracking-wider">BULAN</label>
                           </div>
                           <select 
-                            className="w-full px-4 py-3.5 border border-gray-200 rounded-xl text-sm font-bold text-gray-700 bg-white focus:outline-none focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 hover:border-blue-300 shadow-sm transition-all duration-200 appearance-none bg-[url('data:image/svg+xml;charset=US-ASCII,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%22292.4%22%20height%3D%22292.4%22%3E%3Cpath%20fill%3D%22%239CA3AF%22%20d%3D%22M287%2069.4a17.6%2017.6%200%200%200-13-5.4H18.4c-5%200-9.3%201.8-12.9%205.4A17.6%2017.6%200%200%200%200%2082.2c0%205%201.8%209.3%205.4%2012.9l128%20127.9c3.6%203.6%207.8%205.4%2012.8%205.4s9.2-1.8%2012.8-5.4L287%2095c3.5-3.5%205.4-7.8%205.4-12.8%200-5-1.9-9.2-5.5-12.8z%22%2F%3E%3C%2Fsvg%3E')] bg-[length:12px_12px] bg-no-repeat bg-[right_16px_center]"
+                            className="w-full px-3.5 py-2.5 border border-gray-200 rounded-xl text-xs sm:text-sm font-bold text-gray-700 bg-white focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/10 hover:border-blue-300 shadow-xs appearance-none bg-[url('data:image/svg+xml;charset=US-ASCII,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%22292.4%22%20height%3D%22292.4%22%3E%3Cpath%20fill%3D%22%239CA3AF%22%20d%3D%22M287%2069.4a17.6%2017.6%200%200%200-13-5.4H18.4c-5%200-9.3%201.8-12.9%205.4A17.6%2017.6%200%200%200%200%2082.2c0%205%201.8%209.3%205.4%2012.9l128%20127.9c3.6%203.6%207.8%205.4%2012.8%205.4s9.2-1.8%2012.8-5.4L287%2095c3.5-3.5%205.4-7.8%205.4-12.8%200-5-1.9-9.2-5.5-12.8z%22%2F%3E%3C%2Fsvg%3E')] bg-[length:10px_10px] bg-no-repeat bg-[right_14px_center]"
                             value={selectedMonth}
                             onChange={(e) => setSelectedMonth(e.target.value)}
                           >
@@ -312,12 +344,12 @@ export default function Settings() {
 
                       {activeStep === 'period' && (
                         <div>
-                          <div className="flex items-center space-x-2 mb-2">
-                            <div className="w-2 h-2 rounded-full bg-blue-400"></div>
+                          <div className="flex items-center space-x-1.5 mb-1.5">
+                            <div className="w-1.5 h-1.5 rounded-full bg-blue-500"></div>
                             <label className="text-xs font-bold text-gray-400 uppercase tracking-wider">PERIODE</label>
                           </div>
                           <select 
-                            className="w-full px-4 py-3.5 border border-gray-200 rounded-xl text-sm font-bold text-gray-700 bg-white focus:outline-none focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 hover:border-blue-300 shadow-sm transition-all duration-200 appearance-none bg-[url('data:image/svg+xml;charset=US-ASCII,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%22292.4%22%20height%3D%22292.4%22%3E%3Cpath%20fill%3D%22%239CA3AF%22%20d%3D%22M287%2069.4a17.6%2017.6%200%200%200-13-5.4H18.4c-5%200-9.3%201.8-12.9%205.4A17.6%2017.6%200%200%200%200%2082.2c0%205%201.8%209.3%205.4%2012.9l128%20127.9c3.6%203.6%207.8%205.4%2012.8%205.4s9.2-1.8%2012.8-5.4L287%2095c3.5-3.5%205.4-7.8%205.4-12.8%200-5-1.9-9.2-5.5-12.8z%22%2F%3E%3C%2Fsvg%3E')] bg-[length:12px_12px] bg-no-repeat bg-[right_16px_center]"
+                            className="w-full px-3.5 py-2.5 border border-gray-200 rounded-xl text-xs sm:text-sm font-bold text-gray-700 bg-white focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/10 hover:border-blue-300 shadow-xs appearance-none bg-[url('data:image/svg+xml;charset=US-ASCII,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%22292.4%22%20height%3D%22292.4%22%3E%3Cpath%20fill%3D%22%239CA3AF%22%20d%3D%22M287%2069.4a17.6%2017.6%200%200%200-13-5.4H18.4c-5%200-9.3%201.8-12.9%205.4A17.6%2017.6%200%200%200%200%2082.2c0%205%201.8%209.3%205.4%2012.9l128%20127.9c3.6%203.6%207.8%205.4%2012.8%205.4s9.2-1.8%2012.8-5.4L287%2095c3.5-3.5%205.4-7.8%205.4-12.8%200-5-1.9-9.2-5.5-12.8z%22%2F%3E%3C%2Fsvg%3E')] bg-[length:10px_10px] bg-no-repeat bg-[right_14px_center]"
                             value={selectedPeriod}
                             onChange={(e) => setSelectedPeriod(e.target.value)}
                           >
@@ -329,12 +361,12 @@ export default function Settings() {
 
                       {activeStep === 'file' && (
                         <div>
-                          <div className="flex items-center space-x-2 mb-2">
-                            <div className="w-2 h-2 rounded-full bg-blue-400"></div>
+                          <div className="flex items-center space-x-1.5 mb-1.5">
+                            <div className="w-1.5 h-1.5 rounded-full bg-blue-500"></div>
                             <label className="text-xs font-bold text-gray-400 uppercase tracking-wider">FILE / WEEK</label>
                           </div>
                           <select 
-                            className="w-full px-4 py-3 border border-gray-200 rounded-lg text-sm font-medium text-gray-600 bg-white focus:outline-none focus:border-blue-500 shadow-sm appearance-none bg-[url('data:image/svg+xml;charset=US-ASCII,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%22292.4%22%20height%3D%22292.4%22%3E%3Cpath%20fill%3D%22%239CA3AF%22%20d%3D%22M287%2069.4a17.6%2017.6%200%200%200-13-5.4H18.4c-5%200-9.3%201.8-12.9%205.4A17.6%2017.6%200%200%200%200%2082.2c0%205%201.8%209.3%205.4%2012.9l128%20127.9c3.6%203.6%207.8%205.4%2012.8%205.4s9.2-1.8%2012.8-5.4L287%2095c3.5-3.5%205.4-7.8%205.4-12.8%200-5-1.9-9.2-5.5-12.8z%22%2F%3E%3C%2Fsvg%3E')] bg-[length:10px_10px] bg-no-repeat bg-[right_16px_center]"
+                            className="w-full px-3.5 py-2.5 border border-gray-200 rounded-xl text-xs sm:text-sm font-semibold text-gray-700 bg-white focus:outline-none focus:border-blue-500 shadow-xs appearance-none bg-[url('data:image/svg+xml;charset=US-ASCII,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%22292.4%22%20height%3D%22292.4%22%3E%3Cpath%20fill%3D%22%239CA3AF%22%20d%3D%22M287%2069.4a17.6%2017.6%200%200%200-13-5.4H18.4c-5%200-9.3%201.8-12.9%205.4A17.6%2017.6%200%200%200%200%2082.2c0%205%201.8%209.3%205.4%2012.9l128%20127.9c3.6%203.6%207.8%205.4%2012.8%205.4s9.2-1.8%2012.8-5.4L287%2095c3.5-3.5%205.4-7.8%205.4-12.8%200-5-1.9-9.2-5.5-12.8z%22%2F%3E%3C%2Fsvg%3E')] bg-[length:10px_10px] bg-no-repeat bg-[right_14px_center]"
                             value={selectedFile || ''}
                             onChange={(e) => setSelectedFile(e.target.value)}
                           >
@@ -349,7 +381,7 @@ export default function Settings() {
                   </div>
 
                   <button 
-                    className={`flex items-center space-x-2 px-6 py-2.5 text-white rounded-lg text-sm font-semibold transition-colors shadow-sm mb-4 ${isSaving ? 'bg-gray-400 cursor-not-allowed' : 'bg-[#10B981] hover:bg-[#059669]'}`}
+                    className={`flex items-center space-x-2 px-5 py-2.5 text-white rounded-xl text-xs sm:text-sm font-bold transition-colors shadow-xs mb-3.5 ${isSaving ? 'bg-gray-400 cursor-not-allowed' : 'bg-emerald-600 hover:bg-emerald-700'}`}
                     onClick={handleSaveActiveFile}
                     disabled={isSaving}
                   >
@@ -357,9 +389,9 @@ export default function Settings() {
                     <span>{isSaving ? 'Membaca Excel...' : 'Simpan sebagai File Utama'}</span>
                   </button>
 
-                  <div className="bg-[#F0FDF4] border border-[#DCFCE7] rounded-lg p-3 flex items-center space-x-2.5 text-xs">
-                    <div className="w-2 h-2 bg-green-500 rounded-full flex-shrink-0"></div>
-                    <div className="text-gray-800 flex-1">
+                  <div className="bg-emerald-50/70 border border-emerald-200/80 rounded-xl p-3 flex items-center space-x-2.5 text-xs sm:text-sm">
+                    <div className="w-2 h-2 bg-emerald-500 rounded-full flex-shrink-0"></div>
+                    <div className="text-gray-800 text-xs sm:text-sm truncate flex-1 font-medium">
                       <span className="font-bold">File Utama saat ini:</span> {selectedFile || 'Belum ada file yang dipilih'}
                     </div>
                   </div>
@@ -367,22 +399,88 @@ export default function Settings() {
               </div>
             </div>
 
+            {/* Cloud Sync Status - Firebase Realtime Database */}
+            <div className="bg-white rounded-2xl shadow-sm border border-blue-100 overflow-hidden">
+              <div className="p-4 sm:p-5">
+                <div className="flex items-start space-x-3.5 mb-3">
+                  <div className="w-7 h-7 rounded-full bg-blue-100 text-blue-600 flex items-center justify-center font-bold flex-shrink-0 mt-0.5 text-xs sm:text-sm">
+                    <Database className="w-4 h-4" />
+                  </div>
+                  <div className="flex-1">
+                    <div className="flex items-center justify-between">
+                      <h3 className="text-sm sm:text-base font-bold text-gray-900">Firebase Realtime Database</h3>
+                      <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-bold bg-emerald-50 text-emerald-700 border border-emerald-200">
+                        <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 mr-1.5 animate-pulse"></span>
+                        Cloud Active
+                      </span>
+                    </div>
+                    <p className="text-xs text-gray-500 mt-0.5">
+                      Sinkronisasi otomatis multi-path atomik dengan algoritma diffing hemat kuota.
+                    </p>
+                  </div>
+                </div>
+
+                <div className="ml-10 space-y-3">
+                  <div className="bg-slate-50 border border-slate-200/80 rounded-xl p-2.5 text-xs font-mono text-slate-600 truncate">
+                    <span className="text-[10px] uppercase font-bold text-slate-400 block font-sans mb-0.5">Target RTDB:</span>
+                    {firebaseConfig?.databaseURL || 'Belum terkonfigurasi di .env'}
+                  </div>
+
+                  {firebaseSyncMetrics && (
+                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5 pt-1">
+                      <div className="bg-blue-50/50 border border-blue-100 rounded-xl p-2.5 text-center">
+                        <p className="text-[10px] font-bold text-gray-400 uppercase">Total Baris</p>
+                        <p className="text-sm font-black text-blue-900 mt-0.5">{firebaseSyncMetrics.total?.toLocaleString('id-ID') || 0}</p>
+                      </div>
+                      <div className="bg-emerald-50/50 border border-emerald-100 rounded-xl p-2.5 text-center">
+                        <p className="text-[10px] font-bold text-emerald-600 uppercase">Baru</p>
+                        <p className="text-sm font-black text-emerald-700 mt-0.5">{firebaseSyncMetrics.added || 0}</p>
+                      </div>
+                      <div className="bg-amber-50/50 border border-amber-100 rounded-xl p-2.5 text-center">
+                        <p className="text-[10px] font-bold text-amber-600 uppercase">Diperbarui</p>
+                        <p className="text-sm font-black text-amber-700 mt-0.5">{firebaseSyncMetrics.updated || 0}</p>
+                      </div>
+                      <div className="bg-purple-50/50 border border-purple-100 rounded-xl p-2.5 text-center">
+                        <p className="text-[10px] font-bold text-purple-600 uppercase">Durasi Diffing</p>
+                        <p className="text-sm font-black text-purple-700 mt-0.5">{firebaseSyncMetrics.duration || 0} ms</p>
+                      </div>
+                    </div>
+                  )}
+
+                  <div>
+                    <button
+                      onClick={handleManualFirebaseSync}
+                      disabled={isFirebaseSyncing || !selectedFile}
+                      className="flex items-center space-x-2 px-4 py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs sm:text-sm font-bold transition-all shadow-xs active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      {isFirebaseSyncing ? (
+                        <Loader className="w-4 h-4 animate-spin" />
+                      ) : (
+                        <UploadCloud className="w-4 h-4" />
+                      )}
+                      <span>{isFirebaseSyncing ? 'Mengunggah...' : 'Unggah & Sinkronkan ke Firebase Sekarang'}</span>
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+
             {/* Step 3 - Reset Data */}
-            <div className="bg-white rounded-2xl shadow-sm border border-red-100 overflow-hidden mt-6">
-              <div className="p-5">
-                <div className="flex items-start space-x-4 mb-2">
-                  <div className="w-7 h-7 rounded-full bg-red-100 text-red-600 flex items-center justify-center font-bold flex-shrink-0 mt-0.5 text-sm">
+            <div className="bg-white rounded-2xl shadow-sm border border-red-100 overflow-hidden">
+              <div className="p-4 sm:p-5">
+                <div className="flex items-start space-x-3.5 mb-2">
+                  <div className="w-7 h-7 rounded-full bg-red-100 text-red-600 flex items-center justify-center font-bold flex-shrink-0 mt-0.5 text-xs sm:text-sm">
                     <AlertCircle className="w-4 h-4" />
                   </div>
                   <div>
-                    <h3 className="text-base font-bold text-gray-900">Reset Database</h3>
+                    <h3 className="text-sm sm:text-base font-bold text-gray-900">Reset Database</h3>
                     <p className="text-xs text-gray-500 mt-0.5">Hapus semua data sinkronisasi dan riwayat file yang tersimpan di browser.</p>
                   </div>
                 </div>
-                <div className="ml-11 mt-4">
+                <div className="ml-10 mt-3">
                   <button 
                     onClick={handleClearDatabase}
-                    className="flex items-center space-x-2 px-6 py-2.5 bg-white border border-red-200 text-red-600 rounded-lg text-sm font-semibold hover:bg-red-50 transition-colors shadow-sm"
+                    className="flex items-center space-x-2 px-4 py-2 bg-white border border-red-200 text-red-600 rounded-xl text-xs sm:text-sm font-semibold hover:bg-red-50 transition-colors shadow-xs"
                   >
                     <span>Kosongkan Database</span>
                   </button>

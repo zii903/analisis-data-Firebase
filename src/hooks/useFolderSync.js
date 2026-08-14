@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { get, set } from 'idb-keyval';
 import { parseExcelFile } from '../services/excelParser';
+import { syncExcelToFirebase } from '../services/firebaseSyncService';
 
 export function useFolderSync() {
   // Naikkan versi ini setiap kali logika parsing/worker berubah
@@ -12,6 +13,7 @@ export function useFolderSync() {
   const [folderName, setFolderName] = useState('');
   const [needsPermission, setNeedsPermission] = useState(false);
   const [lastSyncTime, setLastSyncTime] = useState(null);
+  const [firebaseSyncMetrics, setFirebaseSyncMetrics] = useState(null);
   
   // State baru untuk Lazy Sync
   const [availableFiles, setAvailableFiles] = useState([]);
@@ -262,6 +264,18 @@ export function useFolderSync() {
     const now = new Date();
     setLastSyncTime(now);
     await set('global_last_sync_time', now.toISOString());
+
+    // Otomatis sinkronkan ke Firebase Realtime Database dengan Diffing
+    try {
+      if (setStatusText) setStatusText(`Sinkronisasi ke Firebase RTDB...`);
+      const fbResult = await syncExcelToFirebase(filepath, rows);
+      setFirebaseSyncMetrics(fbResult);
+      if (fbResult.success && fbResult.hasChanges) {
+        console.log(`[Firebase RTDB] Sinkronisasi berhasil: ${fbResult.added} baru, ${fbResult.updated} berubah (${fbResult.duration}ms)`);
+      }
+    } catch (fbErr) {
+      console.warn('[Firebase RTDB] Gagal sinkronisasi cloud:', fbErr);
+    }
   };
 
   // Interval polling hanya untuk 1 file yang aktif
@@ -277,7 +291,8 @@ export function useFolderSync() {
 
   return { 
     isWatching, isSyncing, statusText, folderName, needsPermission, 
-    availableFiles, syncSpecificFile, startWatching, stopWatching, lastSyncTime
+    availableFiles, syncSpecificFile, startWatching, stopWatching, lastSyncTime,
+    firebaseSyncMetrics
   };
 }
 
