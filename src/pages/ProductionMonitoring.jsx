@@ -291,7 +291,7 @@ export default function ProductionMonitoring() {
                   {adherenceViewMode === 'gauge' && (
                     <>
                       <div className="flex flex-col justify-center pr-2">
-                        <p className="text-xs font-semibold text-gray-500">Total Output vs Target Pabrik</p>
+                        <p className="text-xs font-semibold text-gray-500">Total Output vs Target</p>
                         <div className="flex items-center space-x-2 mt-1.5">
                           <span className="text-xs text-gray-400 font-medium">Output: <strong className="text-gray-900 font-extrabold">{analyticsSummary.globalActual.toLocaleString('id-ID')}</strong></span>
                           <span className="text-gray-300">/</span>
