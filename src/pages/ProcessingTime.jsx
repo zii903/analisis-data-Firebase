@@ -12,7 +12,7 @@ export default function ProcessingTime() {
   const [modalSearchTerm, setModalSearchTerm] = useState('');
   
   const { selectedFile } = useFilter();
-  const { isSyncing, needsPermission, startWatching, lastSyncTime } = useFolderSyncContext();
+  const { isSyncing, needsPermission, startWatching } = useFolderSyncContext();
   const { machineStats: machines } = useMachineData();
 
   const displayFileName = selectedFile ? selectedFile.split(/[\\/]/).pop() : 'Belum ada file';
@@ -197,18 +197,13 @@ export default function ProcessingTime() {
             <p className="text-[10px] text-gray-500 font-bold tracking-[0.15em] mt-1 uppercase">Machine Category Analysis</p>
           </div>
 
-          {/* Live & Last Sync Status Badge safely placed on the left next to title */}
+          {/* Live Status Badge safely placed on the left next to title */}
           <div className="hidden sm:flex items-center space-x-2 pl-3 border-l border-gray-200 ml-1">
             <div className="flex items-center space-x-1.5 px-3 py-1 border rounded-full text-xs font-bold shadow-xs bg-white"
                  style={{ borderColor: isSyncing ? '#FDBA74' : '#BBF7D0', color: isSyncing ? '#F97316' : '#22C55E' }}>
               <Circle className={`w-2 h-2 ${isSyncing ? 'animate-pulse' : ''}`} style={{ fill: isSyncing ? '#F97316' : '#22C55E' }} />
               <span>{isSyncing ? 'Sinkronisasi...' : 'Live'}</span>
             </div>
-            {lastSyncTime && (
-              <div className="px-2.5 py-1 border border-gray-200 rounded-full text-[11px] font-semibold text-gray-500 bg-white shadow-xs">
-                Terakhir: {lastSyncTime.toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' })}
-              </div>
-            )}
           </div>
         </div>
 

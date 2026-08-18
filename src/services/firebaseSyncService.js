@@ -83,24 +83,24 @@ export async function syncExcelToFirebase(filePath, rows, options = {}) {
         output_perjam: Number(row.output_perjam || 0),
         variant: Number(row.variant || 0),
         estimasi_sisa_waktu: Number(row.estimasi_sisa_waktu || 0),
-        daily_details: row.daily_details || {},
-        _updatedAt: Date.now()
+        daily_details: typeof row.daily_details === 'string' ? JSON.parse(row.daily_details || '{}') : (row.daily_details || {})
       };
 
       // Pastikan seluruh sub-object (seperti daily_details) terbebas dari tanda '.' dll
       const cleanRow = sanitizeDataForFirebase(rawCleanRow);
 
+      // Fingerprint murni dari data Excel (tanpa timestamp dinamis)
       const recordFingerprint = JSON.stringify(cleanRow);
       newCache[sanitizedKey] = recordFingerprint;
 
-      // Cek diffing
+      // Cek diffing terhadap cache sebelumnya
       if (!previousCache[sanitizedKey]) {
         // Data Baru
-        updates[`${rootCollection}/${sanitizedKey}`] = cleanRow;
+        updates[`${rootCollection}/${sanitizedKey}`] = { ...cleanRow, _updatedAt: Date.now() };
         addedCount++;
       } else if (previousCache[sanitizedKey] !== recordFingerprint) {
         // Data Berubah
-        updates[`${rootCollection}/${sanitizedKey}`] = cleanRow;
+        updates[`${rootCollection}/${sanitizedKey}`] = { ...cleanRow, _updatedAt: Date.now() };
         updatedCount++;
       }
     });
@@ -109,6 +109,22 @@ export async function syncExcelToFirebase(filePath, rows, options = {}) {
 
     // 3. Kirim ke Firebase Realtime Database jika ada perubahan data
     if (totalChanges > 0 || options.forceUpdateMeta) {
+      // Cek koneksi internet sebelum mencoba request jaringan
+      if (typeof navigator !== 'undefined' && !navigator.onLine) {
+        console.warn('[FirebaseSync] Mode Offline terdeteksi: Data berhasil disimpan di memori lokal (IndexedDB). Sinkronisasi cloud akan dilanjutkan saat online.');
+        return {
+          success: false,
+          error: 'Offline: Tidak ada koneksi internet. Data tersimpan di memori lokal (IndexedDB).',
+          isOffline: true,
+          total: rows.length,
+          added: 0,
+          updated: 0,
+          hasChanges: false,
+          duration: Math.round(performance.now() - startTime),
+          lastSync: null
+        };
+      }
+
       const nowIso = new Date().toISOString();
 
       // Tambahkan metadata global
@@ -119,10 +135,20 @@ export async function syncExcelToFirebase(filePath, rows, options = {}) {
       updates['_metadata/addedCount'] = addedCount;
       updates['_metadata/updatedCount'] = updatedCount;
 
-      // Multi-path atomic update (1 request jaringan)
-      await update(ref(db), updates);
+      // Multi-path atomic update dengan timeout (mencegah hanging saat koneksi mati/lemah)
+      const timeoutMs = options.timeoutMs || 6000;
+      const timeoutPromise = new Promise((_, reject) =>
+        setTimeout(() => {
+          reject(new Error(`Koneksi Timeout (${timeoutMs / 1000}s): Server Firebase tidak merespons. Periksa koneksi internet Anda.`));
+        }, timeoutMs)
+      );
 
-      // Simpan snapshot cache baru ke IndexedDB
+      await Promise.race([
+        update(ref(db), updates),
+        timeoutPromise
+      ]);
+
+      // Simpan snapshot cache baru ke IndexedDB hanya jika berhasil terkirim ke Firebase
       await set(cacheStorageKey, newCache);
     }
 
@@ -141,7 +167,8 @@ export async function syncExcelToFirebase(filePath, rows, options = {}) {
     console.error('[FirebaseSync] Gagal menyinkronkan data ke Firebase:', err);
     return {
       success: false,
-      error: err.message,
+      error: err.message || 'Terjadi kesalahan saat sinkronisasi Firebase',
+      isOffline: typeof navigator !== 'undefined' ? !navigator.onLine : false,
       total: rows.length,
       added: 0,
       updated: 0,

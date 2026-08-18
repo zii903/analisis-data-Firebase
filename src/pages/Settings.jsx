@@ -1,6 +1,6 @@
 import { useState, useMemo, useEffect } from 'react';
-import { get, set, clear } from 'idb-keyval';
-import { Settings2, FolderOpen, Check, Play, Square, AlertCircle, Loader, Circle, X, BarChart2, FileText, Clock, Activity, Database, Cloud, CheckCircle2, UploadCloud } from 'lucide-react';
+import { get, set } from 'idb-keyval';
+import { Settings2, FolderOpen, Check, Play, Square, AlertCircle, Loader, Circle, X, BarChart2, FileText, Clock, Activity, Database, UploadCloud } from 'lucide-react';
 import { useFilter } from '../contexts/FilterContext';
 import { useFolderSyncContext } from '../contexts/FolderSyncContext';
 import { syncExcelToFirebase } from '../services/firebaseSyncService';
@@ -117,23 +117,6 @@ export default function Settings() {
     }
   };
 
-  const handleClearDatabase = async () => {
-    if (window.confirm("PERINGATAN: Tindakan ini akan mengosongkan SELURUH database indexedDB lokal, termasuk data cache produksi, status file, dan riwayat. Apakah Anda yakin ingin melanjutkan?")) {
-      try {
-        stopWatching();
-        await new Promise(resolve => setTimeout(resolve, 300));
-        await clear();
-        localStorage.clear();
-        sessionStorage.clear();
-        alert('Database berhasil dikosongkan. Halaman akan dimuat ulang.');
-        window.location.replace('/');
-      } catch (err) {
-        console.error("Gagal mengosongkan database:", err);
-        alert('Gagal mengosongkan database.');
-      }
-    }
-  };
-
   const resetToYear = () => { setSelectedYear(''); setSelectedMonth(''); setSelectedPeriod(''); setSelectedFile(''); };
   const resetToMonth = () => { setSelectedMonth(''); setSelectedPeriod(''); setSelectedFile(''); };
   const resetToPeriod = () => { setSelectedPeriod(''); setSelectedFile(''); };
@@ -163,8 +146,8 @@ export default function Settings() {
               <span>{isSyncing ? 'Sinkronisasi...' : 'Live'}</span>
             </div>
             {lastSyncTime && (
-              <div className="px-2.5 py-1 border border-gray-200 rounded-full text-[11px] font-semibold text-gray-500 bg-white shadow-xs">
-                Terakhir: {lastSyncTime.toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' })}
+              <div className="px-3 py-1 border border-gray-200 rounded-full text-[11px] font-semibold text-gray-600 bg-white shadow-xs whitespace-nowrap">
+                Terakhir: {lastSyncTime.toLocaleDateString('id-ID', { weekday: 'long', day: 'numeric', month: 'short', year: 'numeric' })}, {lastSyncTime.toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' })}
               </div>
             )}
           </div>
@@ -461,29 +444,6 @@ export default function Settings() {
                       <span>{isFirebaseSyncing ? 'Mengunggah...' : 'Unggah & Sinkronkan ke Firebase Sekarang'}</span>
                     </button>
                   </div>
-                </div>
-              </div>
-            </div>
-
-            {/* Step 3 - Reset Data */}
-            <div className="bg-white rounded-2xl shadow-sm border border-red-100 overflow-hidden">
-              <div className="p-4 sm:p-5">
-                <div className="flex items-start space-x-3.5 mb-2">
-                  <div className="w-7 h-7 rounded-full bg-red-100 text-red-600 flex items-center justify-center font-bold flex-shrink-0 mt-0.5 text-xs sm:text-sm">
-                    <AlertCircle className="w-4 h-4" />
-                  </div>
-                  <div>
-                    <h3 className="text-sm sm:text-base font-bold text-gray-900">Reset Database</h3>
-                    <p className="text-xs text-gray-500 mt-0.5">Hapus semua data sinkronisasi dan riwayat file yang tersimpan di browser.</p>
-                  </div>
-                </div>
-                <div className="ml-10 mt-3">
-                  <button 
-                    onClick={handleClearDatabase}
-                    className="flex items-center space-x-2 px-4 py-2 bg-white border border-red-200 text-red-600 rounded-xl text-xs sm:text-sm font-semibold hover:bg-red-50 transition-colors shadow-xs"
-                  >
-                    <span>Kosongkan Database</span>
-                  </button>
                 </div>
               </div>
             </div>
