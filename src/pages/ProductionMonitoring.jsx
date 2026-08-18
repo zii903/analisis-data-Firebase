@@ -1,5 +1,9 @@
 import React, { useMemo, useState, useEffect, useRef } from 'react';
-import { Clock, FileText, Settings2, BarChart2, Factory, MonitorPlay, AlertTriangle, ChevronDown, Check, TrendingUp, TrendingDown, CheckCircle2, Gauge, BarChart3, Layers, CheckCircle } from 'lucide-react';
+import { 
+  Clock, FileText, Settings2, BarChart2, Factory, MonitorPlay, 
+  AlertTriangle, ChevronDown, Check, TrendingUp, TrendingDown, 
+  CheckCircle2, Gauge, BarChart3, Layers, CheckCircle, Cpu, Boxes
+} from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { useMachineData } from '../hooks/useMachineData';
 
@@ -191,6 +195,122 @@ export default function ProductionMonitoring() {
     }));
   }, [monitoringData, selectedArea]);
 
+  // Breakdown per Mesin / Sub-Machine (e.g. HF ENDCAP -> ColdPress, HotPress, etc.)
+  const subMachineList = useMemo(() => {
+    if (!machineStats || machineStats.length === 0) return [];
+
+    const currentDay = new Date().getDay();
+    let effectiveDay = currentDay === 0 || currentDay === 6 ? 5 : currentDay;
+    const WORK_HOURS_PER_DAY = 8;
+
+    if (selectedArea === 'Keseluruhan Area') {
+      const list = [];
+      machineStats.forEach(areaObj => {
+        const subMap = {};
+        (areaObj.materials || []).forEach(mat => {
+          const subName = mat.subMachine ? String(mat.subMachine).trim() : null;
+          if (!subName) return;
+
+          if (!subMap[subName]) {
+            subMap[subName] = {
+              name: subName,
+              areaName: areaObj.name,
+              target: 0,
+              actual: 0,
+              hoursLeft: 0,
+              materialsCount: 0
+            };
+          }
+
+          let actualMat = 0;
+          if (mat.dailyActuals) {
+            Object.values(mat.dailyActuals).forEach(v => { actualMat += Number(v || 0); });
+          }
+
+          if (mat.isPlanned) {
+            subMap[subName].target += Number(mat.qtyProduksi || 0);
+          }
+          subMap[subName].actual += actualMat;
+          subMap[subName].hoursLeft += Number(mat.estimasiSisaWaktu || 0);
+          subMap[subName].materialsCount += 1;
+        });
+
+        Object.values(subMap).forEach(sub => {
+          const remaining = Math.max(0, sub.target - sub.actual);
+          const progress = sub.target > 0 ? Math.round((sub.actual / sub.target) * 100) : (sub.actual > 0 ? 100 : 0);
+          const daysNeeded = sub.hoursLeft / WORK_HOURS_PER_DAY;
+          const willSpillOver = remaining > 0 && (effectiveDay + daysNeeded) > 5;
+
+          list.push({
+            ...sub,
+            remaining,
+            progress,
+            willSpillOver
+          });
+        });
+      });
+      return list.sort((a, b) => b.remaining - a.remaining);
+    } else {
+      const areaObj = machineStats.find(m => m.name === selectedArea);
+      if (!areaObj || !areaObj.materials) return [];
+
+      // Periksa apakah area ini benar-benar memiliki kolom/nilai sub-mesin
+      const hasSubMachines = areaObj.materials.some(
+        mat => mat.subMachine && String(mat.subMachine).trim() !== ''
+      );
+
+      // Jika line tidak memiliki sub-mesin, kembalikan array kosong agar tidak dimunculkan
+      if (!hasSubMachines) {
+        return [];
+      }
+
+      const subMap = {};
+
+      areaObj.materials.forEach(mat => {
+        const subName = mat.subMachine ? String(mat.subMachine).trim() : null;
+        if (!subName) return; // Lewati baris tanpa sub-mesin
+
+        if (!subMap[subName]) {
+          subMap[subName] = {
+            name: subName,
+            areaName: areaObj.name,
+            target: 0,
+            actual: 0,
+            hoursLeft: 0,
+            materialsCount: 0,
+            isSubMachine: true
+          };
+        }
+
+        let actualMat = 0;
+        if (mat.dailyActuals) {
+          Object.values(mat.dailyActuals).forEach(v => { actualMat += Number(v || 0); });
+        }
+
+        if (mat.isPlanned) {
+          subMap[subName].target += Number(mat.qtyProduksi || 0);
+        }
+        subMap[subName].actual += actualMat;
+        subMap[subName].hoursLeft += Number(mat.estimasiSisaWaktu || 0);
+        subMap[subName].materialsCount += 1;
+      });
+
+      return Object.values(subMap).map(sub => {
+        const remaining = Math.max(0, sub.target - sub.actual);
+        const progress = sub.target > 0 ? Math.round((sub.actual / sub.target) * 100) : (sub.actual > 0 ? 100 : 0);
+        const daysNeeded = sub.hoursLeft / WORK_HOURS_PER_DAY;
+        const willSpillOver = remaining > 0 && (effectiveDay + daysNeeded) > 5;
+
+        return {
+          ...sub,
+          remaining,
+          progress,
+          willSpillOver
+        };
+      }).sort((a, b) => b.remaining - a.remaining);
+    }
+  }, [machineStats, selectedArea]);
+
   const selectedItem = displayData[0] || null;
 
   return (
@@ -227,7 +347,7 @@ export default function ProductionMonitoring() {
         </div>
       </header>
 
-      {/* Main Single-Screen Content Viewport */}
+      {/* Main Content Viewport */}
       <div className="p-3.5 sm:p-4 flex-1 flex flex-col overflow-hidden min-h-0">
         {loading ? (
           <div className="flex items-center justify-center h-full">
@@ -240,8 +360,8 @@ export default function ProductionMonitoring() {
         ) : (
           <div className="w-full h-full flex flex-col gap-3 overflow-hidden min-h-0 max-w-7xl mx-auto">
 
-            {/* TOP ROW: Summary Analytics (Comfortable Height ~150px, No Overflow/Clipping) */}
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-3 shrink-0 h-[150px]">
+            {/* TOP ROW: Summary Analytics (Height ~145px) */}
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-3 shrink-0 h-[145px]">
               
               {/* Adherence Chart Card */}
               <div className="bg-white rounded-xl p-3.5 px-4 border border-gray-200 shadow-sm flex flex-col justify-between overflow-hidden">
@@ -375,7 +495,7 @@ export default function ProductionMonitoring() {
               </div>
             </div>
 
-            {/* BOTTOM MAIN SECTION: Unified Workload & Estimation (Fills all remaining height in 1 screen) */}
+            {/* BOTTOM MAIN SECTION: Workload, Estimation & Sub-Machines Breakdown */}
             <div className="flex-1 flex flex-col overflow-hidden min-h-0 bg-white rounded-xl border border-gray-200 shadow-sm">
               
               {/* Integrated Header Toolbar with Dropdown Area */}
@@ -386,7 +506,7 @@ export default function ProductionMonitoring() {
                   </div>
                   <div>
                     <h2 className="text-sm font-black text-gray-900 leading-tight">Estimasi Waktu & Beban Kerja Area</h2>
-                    <p className="text-[10px] text-gray-500 font-medium">Sisa target dan estimasi jam pengerjaan</p>
+                    <p className="text-[10px] text-gray-500 font-medium">Sisa target dan rincian performa per mesin spesifik</p>
                   </div>
                 </div>
 
@@ -447,102 +567,222 @@ export default function ProductionMonitoring() {
                 </div>
               </div>
 
-              {/* Seamless Single-Screen Content Body */}
-              <div className="flex-1 p-2.5 sm:p-3 bg-[#FAFAFC] overflow-hidden flex flex-col min-h-0">
+              {/* Scrollable Content Body with Smooth Flow */}
+              <div className="flex-1 p-3 sm:p-4 bg-[#FAFAFC] overflow-y-auto min-h-0 flex flex-col gap-3 sm:gap-3.5">
                 {selectedItem && (
-                  /* UNIFIED SUMMARY DASHBOARD (Fits 100% in viewport without scrolling) */
-                  <div className="h-full flex flex-col justify-between gap-2 sm:gap-2.5">
-                    
-                    {/* Area Title & Status Header */}
-                    <div className="flex items-center justify-between bg-white p-2 sm:p-2.5 px-3 sm:px-3.5 rounded-lg border border-gray-200/80 shadow-xs shrink-0">
-                      <div className="flex items-center space-x-2.5">
-                        <div className="w-7 h-7 rounded-lg bg-blue-50 border border-blue-100 flex items-center justify-center">
-                          <Factory className="w-3.5 h-3.5 text-blue-600" />
+                  <>
+                    {/* SECTION 1: Area Summary Cards */}
+                    <div className="flex flex-col gap-2.5">
+                      
+                      {/* Area Title & Status Header */}
+                      <div className="flex items-center justify-between bg-white p-2.5 px-3.5 rounded-xl border border-gray-200/80 shadow-xs shrink-0">
+                        <div className="flex items-center space-x-2.5">
+                          <div className="w-7 h-7 rounded-lg bg-blue-50 border border-blue-100 flex items-center justify-center">
+                            <Factory className="w-3.5 h-3.5 text-blue-600" />
+                          </div>
+                          <div>
+                            <h3 className="text-sm font-black text-gray-900 leading-tight">{selectedItem.area}</h3>
+                            <p className="text-[10px] text-gray-500">{selectedItem.subTitle || 'Status Beban & Target Lini Produksi'}</p>
+                          </div>
                         </div>
-                        <div>
-                          <h3 className="text-sm font-black text-gray-900 leading-tight">{selectedItem.area}</h3>
-                          <p className="text-[9px] text-gray-500">{selectedItem.subTitle || 'Status Beban & Target Lini Produksi'}</p>
+                        <div className="flex items-center space-x-2">
+                          <div className={`px-2.5 py-0.5 text-[11px] font-black rounded-md ${
+                            selectedItem.progress >= 100 
+                              ? 'bg-emerald-50 text-emerald-700 border border-emerald-200' 
+                              : 'bg-blue-50 text-blue-700 border border-blue-200'
+                          }`}>
+                            {selectedItem.progress}% DONE
+                          </div>
                         </div>
                       </div>
-                      <div className="flex items-center space-x-2">
-                        <div className={`px-2.5 py-0.5 text-[11px] font-black rounded-md ${
-                          selectedItem.progress >= 100 
-                            ? 'bg-emerald-50 text-emerald-700 border border-emerald-200' 
-                            : 'bg-blue-50 text-blue-700 border border-blue-200'
+
+                      {/* Primary Key Metrics 3-Card Split Grid */}
+                      <div className="grid grid-cols-1 md:grid-cols-3 gap-2.5 items-stretch">
+                        {/* Metric 1: Remaining Qty */}
+                        <div className="bg-white rounded-xl p-3 px-4 border border-gray-200/90 shadow-xs flex flex-col justify-center items-center text-center">
+                          <p className="text-[9px] font-extrabold text-gray-400 mb-0.5 tracking-wider uppercase">Total Remaining Area</p>
+                          <p className="text-2xl sm:text-3xl font-black text-gray-900 tracking-tight leading-tight">
+                            {selectedItem.remaining.toLocaleString('id-ID')}
+                          </p>
+                          <p className="text-[10px] text-gray-400 font-semibold mt-0.5">
+                            Dari total {selectedItem.target.toLocaleString('id-ID')} unit target
+                          </p>
+                        </div>
+
+                        {/* Metric 2: Est. Waktu */}
+                        <div className="bg-white rounded-xl p-3 px-4 border border-gray-200/90 shadow-xs flex flex-col justify-center items-center text-center">
+                          <p className="text-[9px] font-extrabold text-blue-500 mb-0.5 tracking-wider uppercase">Estimasi Sisa Waktu</p>
+                          <div className="flex items-baseline justify-center">
+                            <p className="text-2xl sm:text-3xl font-black text-blue-600 tracking-tight leading-tight">
+                              {Math.floor(selectedItem.hoursLeft).toLocaleString('id-ID')}
+                            </p>
+                            <span className="text-xs font-bold text-blue-400 ml-1">Jam</span>
+                          </div>
+                          <p className="text-[10px] text-gray-500 font-semibold mt-0.5">
+                            ≈ {Math.ceil(selectedItem.hoursLeft / 8)} Hari Kerja (8 Jam/Hari)
+                          </p>
+                        </div>
+
+                        {/* Metric 3: Weekly Spillover Assessment */}
+                        <div className={`rounded-xl p-3 px-4 border shadow-xs flex flex-col justify-center ${
+                          selectedItem.willSpillOver 
+                            ? 'bg-red-50 border-red-200/90' 
+                            : 'bg-emerald-50 border-emerald-200/90'
                         }`}>
-                          {selectedItem.progress}% DONE
-                        </div>
-                      </div>
-                    </div>
-
-                    {/* Primary Key Metrics 3-Card Split Grid (Compact & Refined) */}
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-2 sm:gap-2.5 flex-1 items-stretch min-h-0">
-                      {/* Metric 1: Remaining Qty */}
-                      <div className="bg-white rounded-xl p-2.5 sm:p-3 px-3.5 border border-gray-200/90 shadow-xs flex flex-col justify-center items-center text-center">
-                        <p className="text-[9px] font-extrabold text-gray-400 mb-0.5 tracking-wider uppercase">Remaining Qty</p>
-                        <p className="text-2xl sm:text-3xl font-black text-gray-900 tracking-tight leading-tight">
-                          {selectedItem.remaining.toLocaleString('id-ID')}
-                        </p>
-                        <p className="text-[10px] text-gray-400 font-semibold mt-0.5">
-                          Dari total {selectedItem.target.toLocaleString('id-ID')} unit target
-                        </p>
-                      </div>
-
-                      {/* Metric 2: Est. Waktu */}
-                      <div className="bg-white rounded-xl p-2.5 sm:p-3 px-3.5 border border-gray-200/90 shadow-xs flex flex-col justify-center items-center text-center">
-                        <p className="text-[9px] font-extrabold text-blue-500 mb-0.5 tracking-wider uppercase">Estimasi Sisa Waktu</p>
-                        <div className="flex items-baseline justify-center">
-                          <p className="text-2xl sm:text-3xl font-black text-blue-600 tracking-tight leading-tight">
-                            {Math.floor(selectedItem.hoursLeft).toLocaleString('id-ID')}
-                          </p>
-                          <span className="text-xs font-bold text-blue-400 ml-1">Jam</span>
-                        </div>
-                        <p className="text-[10px] text-gray-500 font-semibold mt-0.5">
-                          ≈ {Math.ceil(selectedItem.hoursLeft / 8)} Hari Kerja (8 Jam/Hari)
-                        </p>
-                      </div>
-
-                      {/* Metric 3: Weekly Spillover Assessment */}
-                      <div className={`rounded-xl p-3 sm:p-3.5 px-4 border shadow-xs flex flex-col justify-center ${
-                        selectedItem.willSpillOver 
-                          ? 'bg-red-50 border-red-200/90' 
-                          : 'bg-emerald-50 border-emerald-200/90'
-                      }`}>
-                        <div className="flex items-center space-x-2 mb-1">
-                          {selectedItem.willSpillOver ? (
-                            <AlertTriangle className="w-5 h-5 text-red-600 shrink-0" />
-                          ) : (
-                            <CheckCircle className="w-5 h-5 text-emerald-600 shrink-0" />
-                          )}
-                          <p className={`text-sm sm:text-[15px] font-extrabold tracking-tight ${selectedItem.willSpillOver ? 'text-red-900' : 'text-emerald-900'}`}>
-                            {selectedItem.willSpillOver ? 'Peringatan Spillover Mingguan' : 'Jadwal Produksi Aman'}
+                          <div className="flex items-center space-x-2 mb-1">
+                            {selectedItem.willSpillOver ? (
+                              <AlertTriangle className="w-5 h-5 text-red-600 shrink-0" />
+                            ) : (
+                              <CheckCircle className="w-5 h-5 text-emerald-600 shrink-0" />
+                            )}
+                            <p className={`text-sm font-extrabold tracking-tight ${selectedItem.willSpillOver ? 'text-red-900' : 'text-emerald-900'}`}>
+                              {selectedItem.willSpillOver ? 'Peringatan Spillover Mingguan' : 'Jadwal Produksi Aman'}
+                            </p>
+                          </div>
+                          <p className={`text-xs font-medium leading-relaxed ${selectedItem.willSpillOver ? 'text-red-700' : 'text-emerald-700'}`}>
+                            {selectedItem.willSpillOver
+                              ? `Estimasi ${Math.floor(selectedItem.hoursLeft)} jam tidak akan selesai pada Jumat minggu ini. Berisiko berlanjut ke akhir pekan.`
+                              : 'Estimasi beban kerja mencukupi kapasitas jam kerja normal minggu ini.'}
                           </p>
                         </div>
-                        <p className={`text-xs sm:text-[12.5px] font-medium leading-relaxed ${selectedItem.willSpillOver ? 'text-red-700' : 'text-emerald-700'}`}>
-                          {selectedItem.willSpillOver
-                            ? `Estimasi ${Math.floor(selectedItem.hoursLeft)} jam tidak akan selesai pada Jumat minggu ini. Berisiko berlanjut ke akhir pekan.`
-                            : 'Estimasi beban kerja mencukupi kapasitas jam kerja normal minggu ini.'}
-                        </p>
+                      </div>
+
+                      {/* Area Progress Bar */}
+                      <div className="bg-white p-2.5 px-3.5 rounded-xl border border-gray-200/80 shadow-xs">
+                        <div className="flex justify-between text-[11px] font-bold text-gray-600 mb-1">
+                          <span>Realisasi Keseluruhan Area</span>
+                          <span className="text-gray-900 font-black">
+                            {selectedItem.actual.toLocaleString('id-ID')} / {selectedItem.target.toLocaleString('id-ID')} Unit
+                          </span>
+                        </div>
+                        <div className="w-full bg-gray-100 rounded-full h-2 overflow-hidden">
+                          <div 
+                            className={`h-full rounded-full transition-all duration-1000 ${selectedItem.progress >= 100 ? 'bg-emerald-500' : 'bg-blue-600'}`}
+                            style={{ width: `${Math.min(selectedItem.progress, 100)}%` }}
+                          ></div>
+                        </div>
                       </div>
                     </div>
 
-                    {/* Bottom Progress Bar */}
-                    <div className="bg-white p-2 sm:p-2.5 px-3 sm:px-3.5 rounded-lg border border-gray-200/80 shadow-xs shrink-0">
-                      <div className="flex justify-between text-[11px] font-bold text-gray-600 mb-1">
-                        <span>Progress Realisasi Terhadap Target</span>
-                        <span className="text-gray-900 font-black">
-                          {selectedItem.actual.toLocaleString('id-ID')} / {selectedItem.target.toLocaleString('id-ID')} Unit
-                        </span>
-                      </div>
-                      <div className="w-full bg-gray-100 rounded-full h-2 overflow-hidden">
-                        <div 
-                          className={`h-full rounded-full transition-all duration-1000 ${selectedItem.progress >= 100 ? 'bg-emerald-500' : 'bg-blue-600'}`}
-                          style={{ width: `${Math.min(selectedItem.progress, 100)}%` }}
-                        ></div>
-                      </div>
-                    </div>
+                    {/* SECTION 2: SUB-MACHINES BREAKDOWN (Hanya muncul jika line memiliki mesin/sub-mesin) */}
+                    {subMachineList.length > 0 && (
+                      <div className="bg-white rounded-xl p-3.5 sm:p-4 border border-gray-200/90 shadow-xs flex flex-col gap-3">
+                        <div className="flex items-center justify-between border-b border-gray-100 pb-2.5">
+                          <div className="flex items-center space-x-2">
+                            <div className="w-6 h-6 rounded-md bg-indigo-50 text-indigo-600 flex items-center justify-center font-bold">
+                              <Cpu className="w-3.5 h-3.5" />
+                            </div>
+                            <div>
+                              <h3 className="text-xs sm:text-sm font-extrabold text-gray-900 uppercase tracking-wider">
+                                Rincian Beban Kerja Per Mesin
+                              </h3>
+                              <p className="text-[10px] text-gray-400 font-medium">
+                                Sisa beban (Remaining), target, dan estimasi waktu per mesin/sub-line
+                              </p>
+                            </div>
+                          </div>
+                          <span className="px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-indigo-50 text-indigo-700 border border-indigo-100">
+                            {subMachineList.length} Mesin
+                          </span>
+                        </div>
 
-                  </div>
+                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3 pt-1">
+                          {subMachineList.map((sub, sIdx) => {
+                            const isAchieved = sub.progress >= 100;
+                            const isHighRemaining = sub.remaining > 0 && sub.willSpillOver;
+
+                            return (
+                              <div 
+                                key={sIdx}
+                                className="bg-gradient-to-b from-gray-50/50 to-white rounded-xl p-3.5 border border-gray-200/90 hover:border-blue-300 hover:shadow-md transition-all flex flex-col justify-between gap-3 group relative overflow-hidden"
+                              >
+                                {/* Top Header: Machine Name & Progress Badge */}
+                                <div>
+                                  <div className="flex items-center justify-between gap-1.5 mb-1">
+                                    <div className="flex items-center space-x-1.5 truncate">
+                                      <div className="w-6 h-6 rounded-lg bg-blue-100/60 text-blue-600 flex items-center justify-center shrink-0">
+                                        <Boxes className="w-3.5 h-3.5" />
+                                      </div>
+                                      <span className="font-extrabold text-gray-900 text-xs sm:text-sm truncate group-hover:text-blue-600 transition-colors">
+                                        {sub.name}
+                                      </span>
+                                    </div>
+                                    <span className={`px-2 py-0.5 text-[10px] font-black rounded-md shrink-0 ${
+                                      isAchieved 
+                                        ? 'bg-emerald-50 text-emerald-700 border border-emerald-200' 
+                                        : sub.progress >= 80 
+                                        ? 'bg-blue-50 text-blue-700 border border-blue-200'
+                                        : 'bg-amber-50 text-amber-700 border border-amber-200'
+                                    }`}>
+                                      {sub.progress}% DONE
+                                    </span>
+                                  </div>
+
+                                  {selectedArea === 'Keseluruhan Area' && (
+                                    <span className="text-[10px] font-bold text-gray-400 block truncate">
+                                      Area: <strong className="text-gray-600">{sub.areaName}</strong>
+                                    </span>
+                                  )}
+                                </div>
+
+                                {/* Main Highlight: Remaining Qty */}
+                                <div className="bg-white rounded-lg p-2.5 border border-gray-100 shadow-2xs flex items-center justify-between">
+                                  <div>
+                                    <p className="text-[9px] font-extrabold text-gray-400 uppercase tracking-wider">Remaining</p>
+                                    <p className={`text-xl font-black leading-tight tracking-tight ${
+                                      sub.remaining === 0 ? 'text-emerald-600' : isHighRemaining ? 'text-red-600' : 'text-gray-900'
+                                    }`}>
+                                      {sub.remaining.toLocaleString('id-ID')} <span className="text-xs font-bold text-gray-400">Unit</span>
+                                    </p>
+                                  </div>
+                                  <div className="text-right">
+                                    <p className="text-[9px] font-extrabold text-gray-400 uppercase tracking-wider">Sisa Waktu</p>
+                                    <p className="text-sm font-black text-blue-600 leading-tight">
+                                      {Math.floor(sub.hoursLeft).toLocaleString('id-ID')} <span className="text-[10px] font-semibold text-gray-400">Jam</span>
+                                    </p>
+                                  </div>
+                                </div>
+
+                                {/* Target vs Actual Info & Progress Bar */}
+                                <div className="space-y-1.5">
+                                  <div className="flex justify-between text-[10px] font-semibold text-gray-500">
+                                    <span>Target: <strong className="text-gray-800">{sub.target.toLocaleString('id-ID')}</strong></span>
+                                    <span>Aktual: <strong className="text-emerald-700 font-bold">{sub.actual.toLocaleString('id-ID')}</strong></span>
+                                  </div>
+                                  
+                                  <div className="w-full bg-gray-100 rounded-full h-1.5 overflow-hidden">
+                                    <div 
+                                      className={`h-full rounded-full transition-all duration-700 ${
+                                        isAchieved 
+                                          ? 'bg-emerald-500' 
+                                          : 'bg-gradient-to-r from-blue-500 to-indigo-500'
+                                      }`}
+                                      style={{ width: `${Math.min(sub.progress, 100)}%` }}
+                                    ></div>
+                                  </div>
+                                </div>
+
+                                {/* Card Footer: Material Count & Spillover Badge */}
+                                <div className="flex items-center justify-between pt-1 border-t border-gray-100 text-[10px]">
+                                  <span className="text-gray-400 font-medium">
+                                    {sub.materialsCount} Material
+                                  </span>
+                                  <span className={`font-bold px-1.5 py-0.5 rounded ${
+                                    sub.willSpillOver 
+                                      ? 'text-red-700 bg-red-50 border border-red-100' 
+                                      : 'text-emerald-700 bg-emerald-50 border border-emerald-100'
+                                  }`}>
+                                    {sub.willSpillOver ? '⚠️ Spillover' : '✓ Jadwal Aman'}
+                                  </span>
+                                </div>
+
+                              </div>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    )}
+                  </>
                 )}
               </div>
 
