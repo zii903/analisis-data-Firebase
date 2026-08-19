@@ -674,7 +674,7 @@ export default function ProductionMonitoring() {
                             </div>
                             <div>
                               <h3 className="text-xs sm:text-sm font-extrabold text-gray-900 uppercase tracking-wider">
-                                Rincian Beban Kerja Per Mesin
+                                Rincian Mesin
                               </h3>
                               <p className="text-[10px] text-gray-400 font-medium">
                                 Sisa beban (Remaining), target, dan estimasi waktu per mesin/sub-line
