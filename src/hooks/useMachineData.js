@@ -99,6 +99,7 @@ export function useMachineData() {
             isPlanned,
             customer: row.customer || '',
             proNumber: row.pro_number || '',
+            materialCode: row.material_code || '',
             description: row.description || '',
             qtyOrder: Number(row.qty_order || 0),
             qtyProduksi: Number(row.qty_produksi || 0),

@@ -109,34 +109,57 @@ export default function DetailArea() {
   const displayFileName = selectedFile ? selectedFile.split(/[\\/]/).pop() : 'Belum ada file';
 
   const displayData = groupedData.map(g => {
+    let totalTarget = 0;
     let totalActual = 0;
     let totalUnplanned = 0;
-    let cumulativeActual = 0;
+    let totalRemaining = 0;
 
     if (selectedDay === 'Semua Hari') {
-      Object.values(g.daily).forEach(d => {
-        totalActual += d.total;
-        totalUnplanned += d.unplan;
+      totalActual = Object.values(g.daily).reduce((sum, d) => sum + d.total, 0);
+      totalUnplanned = Object.values(g.daily).reduce((sum, d) => sum + d.unplan, 0);
+      
+      (g.materials || []).forEach(mat => {
+        if (mat.isPlanned) {
+          totalTarget += Number(mat.qtyProduksi || 0);
+          let matActual = 0;
+          if (mat.dailyActuals) Object.values(mat.dailyActuals).forEach(v => matActual += Number(v || 0));
+          if (mat.variant < 0) {
+            totalRemaining += Math.max(0, Number(mat.qtyProduksi || 0) - matActual);
+          }
+        }
       });
-      cumulativeActual = totalActual;
     } else if (g.daily[selectedDay]) {
       totalActual = g.daily[selectedDay].total;
       totalUnplanned = g.daily[selectedDay].unplan;
 
       const selectedIdx = daysKeys.indexOf(selectedDay);
-      for (let i = 0; i <= selectedIdx; i++) {
-        cumulativeActual += g.daily[daysKeys[i]].total;
-      }
+      (g.materials || []).forEach(mat => {
+        if (mat.isPlanned) {
+          totalTarget += Number(mat.qtyProduksi || 0);
+          let cumulativeActual = 0;
+          let totalActualForWeek = 0;
+          if (mat.dailyActuals) {
+              Object.values(mat.dailyActuals).forEach(v => totalActualForWeek += Number(v || 0));
+          }
+          for (let i = 0; i <= selectedIdx; i++) {
+             cumulativeActual += Number((mat.dailyActuals && mat.dailyActuals[daysKeys[i]]) || 0);
+          }
+          
+          const isValidForRemaining = mat.variant < 0 || totalActualForWeek >= Number(mat.qtyProduksi || 0);
+          if (isValidForRemaining) {
+            totalRemaining += Math.max(0, Number(mat.qtyProduksi || 0) - cumulativeActual);
+          }
+        }
+      });
     }
 
-    const remaining = g.target - cumulativeActual;
-    const progress = g.target > 0 ? Math.round((totalActual / g.target) * 100) : 0;
+    const progress = totalTarget > 0 ? Math.round((totalActual / totalTarget) * 100) : 0;
 
     return {
       area: g.name,
-      target: g.target,
-      actual: totalActual,
-      remaining: remaining > 0 ? remaining : 0,
+      target: Math.floor(totalTarget > 0 ? totalTarget : g.target),
+      actual: Math.floor(totalActual),
+      remaining: Math.floor(totalRemaining > 0 ? totalRemaining : 0),
       unplanned: totalUnplanned,
       procTime: g.procTimeTotal > 0 ? `${g.procTimeTotal.toLocaleString('id-ID', { maximumFractionDigits: 3 })}` : '0',
       estimasiSisaWaktu: g.estimasiSisaWaktuTotal || 0,
@@ -292,7 +315,12 @@ export default function DetailArea() {
                     }
                   }
 
-                  const remaining = mat.qtyProduksi - cumulativeActual;
+                  let totalActualForWeek = 0;
+                  if (mat.dailyActuals) {
+                      Object.values(mat.dailyActuals).forEach(v => totalActualForWeek += Number(v || 0));
+                  }
+                  const isValidForRemaining = mat.variant < 0 || totalActualForWeek >= Number(mat.qtyProduksi || 0);
+                  const remaining = isValidForRemaining ? Math.max(0, mat.qtyProduksi - cumulativeActual) : 0;
                   const rawStatusText = mat.rawStatus || mat.status || 'UNPLAN';
 
                   return (

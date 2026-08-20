@@ -47,10 +47,18 @@ export default function ProgressDashboard() {
         dataItem[`${dk}_Unplan`] = machine.daily[dk].unplan || 0;
       });
 
-      const remaining = machine.target - sumOutput;
-      dataItem.RemainingOrder = remaining > 0 ? Math.round(remaining) : 0;
-      dataItem.TargetStr = Math.round(machine.target).toLocaleString('id-ID');
-      dataItem.unplannedTargetStr = Math.round(machine.unplannedTarget || 0).toLocaleString('id-ID');
+      let totalRemaining = 0;
+      (machine.materials || []).forEach(mat => {
+        if (mat.isPlanned && mat.variant < 0) {
+          let actualMat = 0;
+          if (mat.dailyActuals) Object.values(mat.dailyActuals).forEach(v => actualMat += Number(v || 0));
+          totalRemaining += Math.max(0, Number(mat.qtyProduksi || 0) - actualMat);
+        }
+      });
+
+      dataItem.RemainingOrder = totalRemaining > 0 ? Math.floor(totalRemaining) : 0;
+      dataItem.TargetStr = Math.floor(machine.target).toLocaleString('id-ID');
+      dataItem.unplannedTargetStr = Math.floor(machine.unplannedTarget || 0).toLocaleString('id-ID');
       dataItem.isFullUnplan = (!machine.hasPlanned && sumOutput > 0);
 
       formattedData.push(dataItem);

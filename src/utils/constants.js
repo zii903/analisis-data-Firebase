@@ -3,10 +3,10 @@ export const daysKeys = ['Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat', 'Sabtu', '
 export const dayColors = {
   Senin: { planned: '#3B82F6', unplan: '#93C5FD', base: '#3B82F6' },
   Selasa: { planned: '#10B981', unplan: '#6EE7B7', base: '#10B981' },
-  Rabu: { planned: '#F59E0B', unplan: '#FCD34D', base: '#EAB308' },
-  Kamis: { planned: '#8B5CF6', unplan: '#C4B5FD', base: '#F97316' },
-  Jumat: { planned: '#EC4899', unplan: '#F9A8D4', base: '#8B5CF6' },
-  Sabtu: { planned: '#6366F1', unplan: '#A5B4FC', base: '#EC4899' },
+  Rabu: { planned: '#F59E0B', unplan: '#FCD34D', base: '#F59E0B' },
+  Kamis: { planned: '#F97316', unplan: '#FDBA74', base: '#F97316' },
+  Jumat: { planned: '#8B5CF6', unplan: '#C4B5FD', base: '#8B5CF6' },
+  Sabtu: { planned: '#EC4899', unplan: '#F9A8D4', base: '#EC4899' },
   Minggu: { planned: '#EF4444', unplan: '#FCA5A5', base: '#EF4444' },
 };
 

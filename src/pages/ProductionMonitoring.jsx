@@ -2,10 +2,11 @@ import React, { useMemo, useState, useEffect, useRef } from 'react';
 import { 
   Clock, FileText, Settings2, BarChart2, Factory, MonitorPlay, 
   AlertTriangle, ChevronDown, Check, TrendingUp, TrendingDown, 
-  CheckCircle2, Gauge, BarChart3, Layers, CheckCircle, Cpu, Boxes
+  CheckCircle2, Gauge, BarChart3, Layers, CheckCircle, Cpu, Boxes, X
 } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { useMachineData } from '../hooks/useMachineData';
+import MachineDetailModal from '../components/MachineDetailModal';
 
 // SVG Semi-Radial Gauge Component (Zero Overflow, Perfectly Fitted)
 function AdherenceGauge({ adherence }) {
@@ -65,6 +66,7 @@ export default function ProductionMonitoring() {
   const { machineStats, loading } = useMachineData();
   const [adherenceViewMode, setAdherenceViewMode] = useState('gauge'); // 'gauge' | 'bar'
   const [selectedArea, setSelectedArea] = useState('');
+  const [selectedMachineModal, setSelectedMachineModal] = useState(null);
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const dropdownRef = useRef(null);
 
@@ -72,13 +74,28 @@ export default function ProductionMonitoring() {
     if (!machineStats || machineStats.length === 0) return [];
 
     return machineStats.map(g => {
+      let totalTarget = 0;
+      let totalRemaining = 0;
       let totalActual = 0;
       Object.values(g.daily).forEach(d => {
         totalActual += d.total;
       });
 
-      const remaining = g.target - totalActual;
-      const progress = g.target > 0 ? Math.round((totalActual / g.target) * 100) : 0;
+      (g.materials || []).forEach(mat => {
+        if (mat.isPlanned) {
+          totalTarget += Number(mat.qtyProduksi || 0);
+          let matActual = 0;
+          if (mat.dailyActuals) Object.values(mat.dailyActuals).forEach(v => matActual += Number(v || 0));
+          
+          if (mat.variant < 0) {
+            totalRemaining += Math.max(0, Number(mat.qtyProduksi || 0) - matActual);
+          }
+        }
+      });
+
+      const effectiveTarget = totalTarget > 0 ? totalTarget : g.target;
+      const remaining = totalTarget > 0 ? totalRemaining : (g.target - totalActual);
+      const progress = effectiveTarget > 0 ? Math.round((totalActual / effectiveTarget) * 100) : 0;
       const hoursLeft = g.estimasiSisaWaktuTotal || 0;
       
       const currentDay = new Date().getDay(); // 0 (Sun) to 6 (Sat)
@@ -88,13 +105,13 @@ export default function ProductionMonitoring() {
       }
       const WORK_HOURS_PER_DAY = 8;
       const daysNeeded = hoursLeft / WORK_HOURS_PER_DAY;
-      const willSpillOver = remaining > 0 && (effectiveDay + daysNeeded) > 5;
+      const willSpillOver = remaining > 0 && daysNeeded > (6 - effectiveDay);
 
       return {
         area: g.name,
-        target: Math.round(g.target),
-        actual: Math.round(totalActual),
-        remaining: remaining > 0 ? Math.round(remaining) : 0,
+        target: Math.floor(effectiveTarget),
+        actual: Math.floor(totalActual),
+        remaining: remaining > 0 ? Math.floor(remaining) : 0,
         hoursLeft,
         progress,
         willSpillOver
@@ -128,8 +145,8 @@ export default function ProductionMonitoring() {
 
     return {
       adherence,
-      globalTarget: Math.round(globalTarget),
-      globalActual: Math.round(globalActual),
+      globalTarget: Math.floor(globalTarget),
+      globalActual: Math.floor(globalActual),
       underCount,
       overCount,
       onTrackCount
@@ -175,7 +192,8 @@ export default function ProductionMonitoring() {
       }
       const WORK_HOURS_PER_DAY = 8;
       const daysNeeded = totalHoursLeft / WORK_HOURS_PER_DAY;
-      const willSpillOver = totalRemaining > 0 && (effectiveDay + daysNeeded) > 5;
+      // 6 - effectiveDay calculates how many days are left INCLUDING the current day
+      const willSpillOver = totalRemaining > 0 && daysNeeded > (6 - effectiveDay);
 
       return [{
         area: 'Keseluruhan Area',
@@ -217,8 +235,10 @@ export default function ProductionMonitoring() {
               areaName: areaObj.name,
               target: 0,
               actual: 0,
+              remaining: 0,
               hoursLeft: 0,
-              materialsCount: 0
+              materialsCount: 0,
+              materials: []
             };
           }
 
@@ -229,21 +249,23 @@ export default function ProductionMonitoring() {
 
           if (mat.isPlanned) {
             subMap[subName].target += Number(mat.qtyProduksi || 0);
+            if (mat.variant < 0) {
+              subMap[subName].remaining += Math.max(0, Number(mat.qtyProduksi || 0) - actualMat);
+            }
           }
           subMap[subName].actual += actualMat;
           subMap[subName].hoursLeft += Number(mat.estimasiSisaWaktu || 0);
           subMap[subName].materialsCount += 1;
+          subMap[subName].materials.push(mat);
         });
 
         Object.values(subMap).forEach(sub => {
-          const remaining = Math.max(0, sub.target - sub.actual);
           const progress = sub.target > 0 ? Math.round((sub.actual / sub.target) * 100) : (sub.actual > 0 ? 100 : 0);
           const daysNeeded = sub.hoursLeft / WORK_HOURS_PER_DAY;
-          const willSpillOver = remaining > 0 && (effectiveDay + daysNeeded) > 5;
+          const willSpillOver = sub.remaining > 0 && daysNeeded > (6 - effectiveDay);
 
           list.push({
             ...sub,
-            remaining,
             progress,
             willSpillOver
           });
@@ -276,9 +298,11 @@ export default function ProductionMonitoring() {
             areaName: areaObj.name,
             target: 0,
             actual: 0,
+            remaining: 0,
             hoursLeft: 0,
             materialsCount: 0,
-            isSubMachine: true
+            isSubMachine: true,
+            materials: []
           };
         }
 
@@ -289,21 +313,23 @@ export default function ProductionMonitoring() {
 
         if (mat.isPlanned) {
           subMap[subName].target += Number(mat.qtyProduksi || 0);
+          if (mat.variant < 0) {
+            subMap[subName].remaining += Math.max(0, Number(mat.qtyProduksi || 0) - actualMat);
+          }
         }
         subMap[subName].actual += actualMat;
         subMap[subName].hoursLeft += Number(mat.estimasiSisaWaktu || 0);
         subMap[subName].materialsCount += 1;
+        subMap[subName].materials.push(mat);
       });
 
       return Object.values(subMap).map(sub => {
-        const remaining = Math.max(0, sub.target - sub.actual);
         const progress = sub.target > 0 ? Math.round((sub.actual / sub.target) * 100) : (sub.actual > 0 ? 100 : 0);
         const daysNeeded = sub.hoursLeft / WORK_HOURS_PER_DAY;
-        const willSpillOver = remaining > 0 && (effectiveDay + daysNeeded) > 5;
+        const willSpillOver = sub.remaining > 0 && daysNeeded > (6 - effectiveDay);
 
         return {
           ...sub,
-          remaining,
           progress,
           willSpillOver
         };
@@ -641,7 +667,10 @@ export default function ProductionMonitoring() {
                           </div>
                           <p className={`text-xs font-medium leading-relaxed ${selectedItem.willSpillOver ? 'text-red-700' : 'text-emerald-700'}`}>
                             {selectedItem.willSpillOver
-                              ? `Estimasi ${Math.floor(selectedItem.hoursLeft)} jam tidak akan selesai pada Jumat minggu ini. Berisiko berlanjut ke akhir pekan.`
+                              ? `Estimasi ${Math.floor(selectedItem.hoursLeft)} jam tidak akan selesai pada Jumat minggu ini. Berisiko berlanjut ke akhir pekan.` + 
+                                (subMachineList.filter(m => m.willSpillOver).length > 0 
+                                  ? ` Disebabkan oleh Spillover pada mesin: ${subMachineList.filter(m => m.willSpillOver).map(m => m.name).join(', ')}.`
+                                  : '')
                               : 'Estimasi beban kerja mencukupi kapasitas jam kerja normal minggu ini.'}
                           </p>
                         </div>
@@ -694,7 +723,8 @@ export default function ProductionMonitoring() {
                             return (
                               <div 
                                 key={sIdx}
-                                className="bg-gradient-to-b from-gray-50/50 to-white rounded-xl p-3.5 border border-gray-200/90 hover:border-blue-300 hover:shadow-md transition-all flex flex-col justify-between gap-3 group relative overflow-hidden"
+                                onClick={() => setSelectedMachineModal(sub)}
+                                className="bg-gradient-to-b from-gray-50/50 to-white rounded-xl p-3.5 border border-gray-200/90 hover:border-blue-300 hover:shadow-md transition-all flex flex-col justify-between gap-3 group relative overflow-hidden cursor-pointer hover:-translate-y-0.5"
                               >
                                 {/* Top Header: Machine Name & Progress Badge */}
                                 <div>
@@ -791,6 +821,13 @@ export default function ProductionMonitoring() {
           </div>
         )}
       </div>
+
+      {/* Machine Detail Modal */}
+      <MachineDetailModal 
+        selectedMachineModal={selectedMachineModal} 
+        onClose={() => setSelectedMachineModal(null)} 
+      />
+
     </div>
   );
 }
