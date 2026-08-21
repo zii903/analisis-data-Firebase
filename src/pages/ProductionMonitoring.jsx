@@ -165,7 +165,7 @@ export default function ProductionMonitoring() {
 
   useEffect(() => {
     if (monitoringData && monitoringData.length > 0 && !selectedArea) {
-      setSelectedArea(monitoringData[0].area);
+      setSelectedArea('Keseluruhan Area');
     }
   }, [monitoringData, selectedArea]);
 

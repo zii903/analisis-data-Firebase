@@ -1,9 +1,10 @@
 import React, { useState } from 'react';
-import { X, Factory, AlertTriangle, Boxes, ChevronLeft, ChevronRight } from 'lucide-react';
+import { X, Factory, AlertTriangle, Boxes, ChevronLeft, ChevronRight, Search } from 'lucide-react';
 
 export default function MachineDetailModal({ selectedMachineModal, onClose }) {
   const [activeTab, setActiveTab] = useState('remaining'); // 'remaining' | 'completed'
   const [currentPage, setCurrentPage] = useState(1);
+  const [searchQuery, setSearchQuery] = useState('');
   const itemsPerPage = 5;
 
   if (!selectedMachineModal) return null;
@@ -17,13 +18,21 @@ export default function MachineDetailModal({ selectedMachineModal, onClose }) {
       return { ...mat, calculatedActual: actualMat, calculatedRemaining: rem };
     });
 
-  // Filter based on active tab
+  // Filter based on active tab and search query
   const filteredMaterials = processedMaterials.filter(mat => {
+    // Search filter
+    const searchLower = searchQuery.toLowerCase();
+    const matchesSearch = !searchQuery || 
+      (mat.proNumber && String(mat.proNumber).toLowerCase().includes(searchLower)) ||
+      (mat.description && String(mat.description).toLowerCase().includes(searchLower));
+      
+    if (!matchesSearch) return false;
+
     if (activeTab === 'remaining') {
       return mat.calculatedRemaining > 0;
     } else {
-      // Completed: either remaining is 0 (and was initially planned) and actual > 0, or achieved target
-      return mat.calculatedRemaining === 0 && mat.calculatedActual > 0;
+      // Completed: remaining is 0
+      return mat.calculatedRemaining === 0;
     }
   });
 
@@ -47,6 +56,11 @@ export default function MachineDetailModal({ selectedMachineModal, onClose }) {
     setCurrentPage(1); // Reset page on tab change
   };
 
+  const handleSearchChange = (e) => {
+    setSearchQuery(e.target.value);
+    setCurrentPage(1); // Reset page on search
+  };
+
   // calculate excess hours for spillover message
   const currentDay = new Date().getDay();
   let effectiveDay = currentDay;
@@ -61,7 +75,7 @@ export default function MachineDetailModal({ selectedMachineModal, onClose }) {
         onClick={onClose}
       ></div>
       
-      <div className="relative bg-white rounded-2xl shadow-2xl w-full max-w-4xl max-h-[90vh] flex flex-col overflow-hidden animate-in fade-in zoom-in-95 duration-200">
+      <div className="relative bg-white rounded-2xl shadow-2xl w-full max-w-4xl max-h-[90vh] flex flex-col overflow-hidden animate-in fade-in zoom-in-95 duration-200 select-text">
         {/* Modal Header */}
         <div className="px-6 py-4 border-b border-gray-100 flex items-center justify-between bg-gradient-to-r from-gray-50 to-white">
           <div className="flex items-center space-x-3">
@@ -132,11 +146,27 @@ export default function MachineDetailModal({ selectedMachineModal, onClose }) {
 
           {/* Material List Table */}
           <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden flex flex-col min-h-[400px]">
-            <div className="px-5 py-3 border-b border-gray-200 bg-gray-50 flex justify-between items-center">
-              <h4 className="text-sm font-bold text-gray-900 flex items-center gap-2">
-                <Boxes className="w-4 h-4 text-blue-500" />
-                Rincian Beban Material
-              </h4>
+            <div className="px-5 py-3 border-b border-gray-200 bg-gray-50 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
+              <div className="flex items-center gap-4 w-full sm:w-auto">
+                <h4 className="text-sm font-bold text-gray-900 flex items-center gap-2 whitespace-nowrap">
+                  <Boxes className="w-4 h-4 text-blue-500" />
+                  Rincian Beban Material
+                </h4>
+                
+                {/* Search Bar */}
+                <div className="relative flex-1 sm:w-64">
+                  <div className="absolute inset-y-0 left-0 pl-2.5 flex items-center pointer-events-none">
+                    <Search className="h-3.5 w-3.5 text-gray-400" />
+                  </div>
+                  <input
+                    type="text"
+                    placeholder="Cari PRO atau deskripsi..."
+                    value={searchQuery}
+                    onChange={handleSearchChange}
+                    className="block w-full pl-8 pr-3 py-1.5 border border-gray-200 rounded-lg text-xs focus:ring-blue-500 focus:border-blue-500 bg-white placeholder-gray-400 transition-colors"
+                  />
+                </div>
+              </div>
               
               {/* Tabs */}
               <div className="flex space-x-1 bg-gray-200/60 p-1 rounded-lg">
@@ -158,10 +188,10 @@ export default function MachineDetailModal({ selectedMachineModal, onClose }) {
                       : 'text-gray-500 hover:text-gray-700 hover:bg-gray-200/50'
                   }`}
                 >
-                  Berhasil Dibuat ({processedMaterials.filter(m => m.calculatedRemaining === 0 && m.calculatedActual > 0).length})
+                  Selesai ({processedMaterials.filter(m => m.calculatedRemaining === 0).length})
                 </button>
               </div>
-            </div>
+             </div>
             
             <div className="flex-1 overflow-x-auto">
               <table className="w-full text-left border-collapse">
@@ -184,14 +214,14 @@ export default function MachineDetailModal({ selectedMachineModal, onClose }) {
                       <tr key={idx} className="hover:bg-gray-50/80 transition-colors">
                         <td className="p-4 py-3">
                           <div className="flex flex-col items-start gap-1.5">
-                            {mat.proNumber ? (
+                            {mat.proNumber && !String(mat.proNumber).startsWith('DRAFT') ? (
                               <span className="px-2.5 py-0.5 rounded-md text-[10px] font-black bg-blue-50 text-blue-700 border border-blue-200 tracking-wider uppercase">
                                 PRO: {mat.proNumber}
                               </span>
                             ) : (
                               <span className="font-bold text-gray-400">-</span>
                             )}
-                            <span className="text-[10px] text-gray-500 font-medium line-clamp-2 max-w-[220px] leading-snug">{mat.description || '-'}</span>
+                            <span className="text-[10px] text-gray-500 font-medium break-all leading-snug">{mat.description || '-'}</span>
                           </div>
                         </td>
                         <td className="p-4 py-3 text-right font-semibold text-gray-600">
